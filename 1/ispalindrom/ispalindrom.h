@@ -9,10 +9,11 @@ int is_palindrom(char line[]);
 
 /**
  * Performs a palindrom check for every line of a file.
+ * @description Allocates memory for the returned pointer.
  * @param file Path to the file.
  * @param ignore_casing Whether letter casing should be ignored for the palindrom check.
  * @param ignore_whitespaces Whether whitespaces should be ignored for the palindrom check.
- * @return Evaluation for every line of the file.
+ * @return String of the evaluation for every line of the file.
  */
 char *check_file(char *file, int ignore_casing, int ignore_whitespaces);
 

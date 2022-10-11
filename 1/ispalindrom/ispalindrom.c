@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     int option, ignore_casing, ignore_whitespaces, output_to_file;
     ignore_casing = ignore_whitespaces = output_to_file = 0;
     char *output_file;
-    while((option = getopt(argc, argv, "sio:")) != -1) {
+    while((option = getopt(argc, argv, "sio:")) > 0) {
         switch(option) {
             case 's': {
                 ignore_whitespaces = 1;
@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
             } else {
                 printf("%s", output);
             }
+            free(output);
         }
     } else {
         //sscanf("%s", )
@@ -60,13 +61,14 @@ char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
         exit(EXIT_FAILURE);
     }
     char *line = NULL;
-    char *output = (char*) malloc(sizeof(char));
+    // TODO: check if better solution
+    char *output = (char*) calloc(1, sizeof(char));
     if (output == NULL) {
         exit(EXIT_FAILURE);
     }
     size_t len = 0;
     ssize_t read;
-    while ((read = getline(&line, &len, fp)) != -1) {
+    while ((read = getline(&line, &len, fp)) > 0) {
         remove_newline(line);
         char evaluated[strlen(line) + 1];
         strcpy(evaluated, line);
@@ -90,15 +92,18 @@ char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
         } else {
             strcat(res, noPalindromSuffix);
         }
-        char *tmp = (char *) realloc(output, (strlen(output) + strlen(res) + 1) * sizeof(*output));
+        int size = (strlen(output) + strlen(res) + 1) * sizeof(*output);
+        char *tmp = (char *) realloc(output, size);
         if (tmp == NULL) {
             free(output);
+            free(line);
             exit(EXIT_FAILURE);
         }
         output = tmp;
         //printf("2: %s\n", output);
         strcat(output, res);
     }
+    free(line);
     fclose(fp);
     return output;
 }
