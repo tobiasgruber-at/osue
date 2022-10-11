@@ -68,24 +68,24 @@ char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
     ssize_t read;
     while ((read = getline(&line, &len, fp)) != -1) {
         remove_newline(line);
-        char formatted_line[strlen(line) + 1];
-        strcpy(formatted_line, line);
-        if (strlen(formatted_line) <= 0) {
+        char evaluated[strlen(line) + 1];
+        strcpy(evaluated, line);
+        if (strlen(evaluated) <= 0) {
             continue;
         }
         if (ignore_whitespaces) {
-            char temp[strlen(formatted_line) + 1];
-            strcpy(temp, formatted_line);
-            trim(formatted_line, temp);
+            char temp[strlen(evaluated) + 1];
+            strcpy(temp, evaluated);
+            trim(evaluated, temp);
         }
         if (ignore_casing) {
-
+            to_lower(evaluated);
         }
         char palindromSuffix[] = " is a palindrom\n";
         char noPalindromSuffix[] = " is not a palindrom\n";
         char res[strlen(line) + strlen(noPalindromSuffix) + 1];
         strcpy(res, line);
-        if (is_palindrom(formatted_line)) {
+        if (is_palindrom(evaluated)) {
             strcat(res, palindromSuffix);
         } else {
             strcat(res, noPalindromSuffix);
@@ -114,5 +114,5 @@ int is_palindrom(char line[]) {
 }
 
 void print_usage(char program_name[]) {
-    printf("Usage: %s [-s] [-i] [-o outfile] [file...]", program_name);
+    printf("Usage: %s [-s] [-i] [-o outfile] [file...]\n", program_name);
 }

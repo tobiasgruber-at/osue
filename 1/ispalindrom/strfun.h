@@ -10,3 +10,9 @@ void remove_newline(char src[]);
  * @param line Source string to be trimmed.
  */
 void trim(char res[], char src[]);
+
+/**
+ * Converts a string to lower case.
+ * @param src String to be updated.
+ */
+void to_lower(char src[]);
