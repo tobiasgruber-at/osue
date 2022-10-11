@@ -8,11 +8,13 @@ int main(int argc, char *argv[]);
 int is_palindrom(char line[]);
 
 /**
- * Reads and checks every line of a file for palindroms.
+ * Performs a palindrom check for every line of a file.
  * @param file Path to the file.
+ * @param ignore_casing Whether letter casing should be ignored for the palindrom check.
+ * @param ignore_whitespaces Whether whitespaces should be ignored for the palindrom check.
  * @return Evaluation for every line of the file.
  */
-char *check_file(char *file);
+char *check_file(char *file, int ignore_casing, int ignore_whitespaces);
 
 /**
  * Prints the usage of the program.

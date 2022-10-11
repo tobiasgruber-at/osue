@@ -1,13 +1,12 @@
 /**
  * Removes the newline character at the end of a string.
- * @param line String that should be manipulated.
- * @return Updated string.
+ * @param src String that should be manipulated.
  */
-char *remove_newline(char line[]);
+void remove_newline(char src[]);
 
 /**
  * Removes all whitespaces from a string.
  * @param res String to be updated.
  * @param line Source string to be trimmed.
  */
-void trim(char res[], char line[]);
+void trim(char res[], char src[]);

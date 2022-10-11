@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         for(; optind < argc; optind++){
             char *file_to_read = argv[optind];
             char *output;
-            output = check_file(file_to_read);
+            output = check_file(file_to_read, ignore_casing, ignore_whitespaces);
             if (output_to_file) {
                 // write to output file
             } else {
@@ -54,16 +54,7 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-int is_palindrom(char line[]) {
-    for (int i = 0; i < strlen(line) / 2 + 1; i++) {
-        if (line[i] != line[strlen(line) - 1 - i]) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-char *check_file(char *file) {
+char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
     FILE *fp = fopen(file, "r");
     if (fp == NULL) {
         exit(EXIT_FAILURE);
@@ -71,32 +62,55 @@ char *check_file(char *file) {
     char *line = NULL;
     char *output = (char*) malloc(sizeof(char));
     if (output == NULL) {
-        free(output);
         exit(EXIT_FAILURE);
     }
     size_t len = 0;
     ssize_t read;
     while ((read = getline(&line, &len, fp)) != -1) {
-        //printf("Retrieved line of length %zu:\n", read);
-        char *res = remove_newline(line);
-        if (strlen(res) <= 0) {
+        remove_newline(line);
+        char formatted_line[strlen(line) + 1];
+        strcpy(formatted_line, line);
+        if (strlen(formatted_line) <= 0) {
             continue;
         }
-        if (is_palindrom(res)) {
-            strcat(res, " is a palindrom\n");
-        } else {
-            strcat(res, " is not a palindrom\n");
+        if (ignore_whitespaces) {
+            char temp[strlen(formatted_line) + 1];
+            strcpy(temp, formatted_line);
+            trim(formatted_line, temp);
         }
-        output = (char *) realloc(output, (strlen(output) + strlen(res) + 1) * sizeof(*output));
-        if (output == NULL) {
+        if (ignore_casing) {
+
+        }
+        char palindromSuffix[] = " is a palindrom\n";
+        char noPalindromSuffix[] = " is not a palindrom\n";
+        char res[strlen(line) + strlen(noPalindromSuffix) + 1];
+        strcpy(res, line);
+        if (is_palindrom(formatted_line)) {
+            strcat(res, palindromSuffix);
+        } else {
+            strcat(res, noPalindromSuffix);
+        }
+        char *tmp = (char *) realloc(output, (strlen(output) + strlen(res) + 1) * sizeof(*output));
+        if (tmp == NULL) {
             free(output);
             exit(EXIT_FAILURE);
         }
+        output = tmp;
         //printf("2: %s\n", output);
         strcat(output, res);
     }
     fclose(fp);
     return output;
+}
+
+int is_palindrom(char line[]) {
+    for (int i = 0; i < strlen(line) / 2 + 1; i++) {
+        //printf("%i: %c = %c", i, line[i], line[strlen(line) - 1 - i]);
+        if (line[i] != line[strlen(line) - 1 - i]) {
+            return 0;
+        }
+    }
+    return 1;
 }
 
 void print_usage(char program_name[]) {
