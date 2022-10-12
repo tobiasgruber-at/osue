@@ -1,13 +1,18 @@
+CC = gcc -std=c99 -g
+DEFS = -D_BSD_SOURCE -D_SVID_SOURCE -D_POSIX_C_SOURCE=200809L
+CFLAGS = -Wall -g -std=c99 -pedantic $(DEFS)
+
+.PHONY: all clean
 all: ispalindrom
 
 ispalindrom: ispalindrom.o strfun.o
-	gcc -std=c99 -g -o ispalindrom ispalindrom.o strfun.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
-ispalindrom.o: ispalindrom.c
-	gcc -std=c99 -g -c -o ispalindrom.o ispalindrom.c
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-strfun.o: strfun.c
-	gcc -std=c99 -g -c -o strfun.o strfun.c
+ispalindrom.o: ispalindrom.c ispalindrom.h strfun.h
+strfun.o: strfun.c strfun.h
 
 clean:
-	rm -f ispalindrom ispalindrom.o strfun.o
+	rm -rf *.o ispalindrom
