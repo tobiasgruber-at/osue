@@ -14,34 +14,47 @@ int main(int argc, char *argv[]) {
     while((option = getopt(argc, argv, "sio:")) > 0) {
         switch(option) {
             case 's': {
+                if (ignore_whitespaces) {
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
                 ignore_whitespaces = 1;
                 //printf("ignore whitespaces\n");
                 break;
             }
             case 'i': {
+                if (ignore_casing) {
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
                 ignore_casing = 1;
                 //printf("ignoring casing\n");
                 break;
             }
             case 'o': {
+                if (output_to_file) {
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
                 output_to_file = 1;
                 output_file = optarg;
                 //printf("outputting to file: %s\n", output_file);
                 break;
             }
-            default: {}
+            default: {
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
         }
     }
     int remaining_arguments = argc - optind;
-    if (remaining_arguments <= 0) {
-        print_usage(argv[0]);
-        exit(EXIT_FAILURE);
-    }
-    if (optind < argc) {
+    if (remaining_arguments > 0) {
         for(; optind < argc; optind++){
             char *file_to_read = argv[optind];
-            char *output;
-            output = check_file(file_to_read, ignore_casing, ignore_whitespaces);
+            char *output = NULL;
+            if (check_file(&output, file_to_read, ignore_casing, ignore_whitespaces) == -1) {
+                exit(EXIT_FAILURE);
+            }
             if (output_to_file) {
                 // write to output file
             } else {
@@ -55,18 +68,13 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
+int check_file(char **dst_p, char *file, int ignore_casing, int ignore_whitespaces) {
     FILE *fp = fopen(file, "r");
     if (fp == NULL) {
-        exit(EXIT_FAILURE);
+        return -1;
     }
     char *line = NULL;
-    // TODO: check if better solution
-    char *output = (char*) calloc(1, sizeof(char));
-    if (output == NULL) {
-        exit(EXIT_FAILURE);
-    }
-    size_t len = 0;
+    size_t len = 0, dst_size = 0;
     ssize_t read;
     while ((read = getline(&line, &len, fp)) > 0) {
         remove_newline(line);
@@ -85,33 +93,29 @@ char *check_file(char *file, int ignore_casing, int ignore_whitespaces) {
         }
         char palindromSuffix[] = " is a palindrom\n";
         char noPalindromSuffix[] = " is not a palindrom\n";
-        char res[strlen(line) + strlen(noPalindromSuffix) + 1];
-        strcpy(res, line);
-        if (is_palindrom(evaluated)) {
-            strcat(res, palindromSuffix);
-        } else {
-            strcat(res, noPalindromSuffix);
-        }
-        int size = (strlen(output) + strlen(res) + 1) * sizeof(*output);
-        char *tmp = (char *) realloc(output, size);
+        char line_res[strlen(line) + strlen(noPalindromSuffix) + 1];
+        strcpy(line_res, line);
+        strcat(line_res, is_palindrom(evaluated) ? palindromSuffix : noPalindromSuffix);
+        dst_size += sizeof(char) * (strlen(line_res) + 1);
+        char *tmp = (char *) ((*dst_p == NULL) ? malloc(dst_size) : realloc(*dst_p, dst_size));
         if (tmp == NULL) {
-            free(output);
             free(line);
-            exit(EXIT_FAILURE);
+            if (*dst_p != NULL) {
+                free(*dst_p);
+            }
+            return -1;
         }
-        output = tmp;
-        //printf("2: %s\n", output);
-        strcat(output, res);
+        *dst_p = tmp;
+        strcat(*dst_p, line_res);
     }
     free(line);
     fclose(fp);
-    return output;
+    return 0;
 }
 
-int is_palindrom(char line[]) {
-    for (int i = 0; i < strlen(line) / 2 + 1; i++) {
-        //printf("%i: %c = %c", i, line[i], line[strlen(line) - 1 - i]);
-        if (line[i] != line[strlen(line) - 1 - i]) {
+int is_palindrom(char src[]) {
+    for (int i = 0; i < strlen(src) / 2 + 1; i++) {
+        if (src[i] != src[strlen(src) - 1 - i]) {
             return 0;
         }
     }
