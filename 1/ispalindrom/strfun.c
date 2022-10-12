@@ -1,3 +1,10 @@
+/**
+ * @file strfun.c
+ * @author Tobias Gruber
+ * @date 12.10.2022
+ * @brief Implementation of the string functions module.
+ */
+
 #include "strfun.h"
 #include <string.h>
 #include <ctype.h>

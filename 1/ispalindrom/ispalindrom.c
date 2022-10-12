@@ -1,3 +1,10 @@
+/**
+ * @file ispalindrom.c
+ * @author Tobias Gruber
+ * @date 12.10.2022
+ * @brief Implementation of the main module.
+ */
+
 #include "ispalindrom.h"
 #include "strfun.h"
 #include <stdio.h>
@@ -5,76 +12,71 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <errno.h>
 #include <sys/types.h>
 
+char *prog_name;
+
 int main(int argc, char *argv[]) {
-    int option, ignore_casing, ignore_whitespaces, output_to_file;
-    ignore_casing = ignore_whitespaces = output_to_file = 0;
-    char *output_file;
+    int option, ignore_casing = 0, ignore_whitespaces = 0, output_to_file = 0;
+    char *output_file = NULL;
+    prog_name = argv[0];
     while((option = getopt(argc, argv, "sio:")) > 0) {
         switch(option) {
             case 's': {
-                if (ignore_whitespaces) {
-                    print_usage(argv[0]);
-                    exit(EXIT_FAILURE);
-                }
-                ignore_whitespaces = 1;
-                //printf("ignore whitespaces\n");
+                ++ignore_whitespaces;
                 break;
             }
             case 'i': {
-                if (ignore_casing) {
-                    print_usage(argv[0]);
-                    exit(EXIT_FAILURE);
-                }
-                ignore_casing = 1;
-                //printf("ignoring casing\n");
+                ++ignore_casing;
                 break;
             }
             case 'o': {
-                if (output_to_file) {
-                    print_usage(argv[0]);
-                    exit(EXIT_FAILURE);
-                }
-                output_to_file = 1;
+                ++output_to_file;
                 output_file = optarg;
                 //printf("outputting to file: %s\n", output_file);
                 break;
             }
+            case '?':
             default: {
-                print_usage(argv[0]);
-                exit(EXIT_FAILURE);
+                usage();
             }
         }
     }
-    int remaining_arguments = argc - optind;
-    if (remaining_arguments > 0) {
+    if (ignore_whitespaces > 1 || ignore_casing > 1 || output_to_file > 1) {
+        usage();
+    }
+    if (optind < argc) {
+        char *output = NULL;
         for(; optind < argc; optind++){
             char *file_to_read = argv[optind];
-            char *output = NULL;
             if (check_file(&output, file_to_read, ignore_casing, ignore_whitespaces) == -1) {
+                if (output != NULL) {
+                    free(output);
+                }
                 exit(EXIT_FAILURE);
             }
-            if (output_to_file) {
-                // write to output file
-            } else {
-                printf("%s", output);
-            }
-            free(output);
         }
+        if (output_to_file) {
+            // write to output file
+        } else {
+            printf("%s", output);
+        }
+        free(output);
     } else {
         //sscanf("%s", )
     }
     return EXIT_SUCCESS;
 }
 
-int check_file(char **dst_p, char *file, int ignore_casing, int ignore_whitespaces) {
-    FILE *fp = fopen(file, "r");
+int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whitespaces) {
+    FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
+        fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
         return -1;
     }
     char *line = NULL;
-    size_t len = 0, dst_size = 0;
+    size_t len = 0;
     ssize_t read;
     while ((read = getline(&line, &len, fp)) > 0) {
         remove_newline(line);
@@ -96,13 +98,12 @@ int check_file(char **dst_p, char *file, int ignore_casing, int ignore_whitespac
         char line_res[strlen(line) + strlen(noPalindromSuffix) + 1];
         strcpy(line_res, line);
         strcat(line_res, is_palindrom(evaluated) ? palindromSuffix : noPalindromSuffix);
-        dst_size += sizeof(char) * (strlen(line_res) + 1);
+        size_t dst_size = sizeof(char) * ((*dst_p == NULL ? 0 : strlen(*dst_p)) + strlen(line_res) + 1);
         char *tmp = (char *) ((*dst_p == NULL) ? malloc(dst_size) : realloc(*dst_p, dst_size));
         if (tmp == NULL) {
+            fclose(fp);
             free(line);
-            if (*dst_p != NULL) {
-                free(*dst_p);
-            }
+            fprintf(stderr, "[%s] ERROR: malloc failed: %s\n", prog_name, strerror(errno));
             return -1;
         }
         *dst_p = tmp;
@@ -122,6 +123,7 @@ int is_palindrom(char src[]) {
     return 1;
 }
 
-void print_usage(char program_name[]) {
-    printf("Usage: %s [-s] [-i] [-o outfile] [file...]\n", program_name);
+void usage(void) {
+    fprintf(stderr, "Usage: %s [-s] [-i] [-o outfile] [file...]\n", prog_name);
+    exit(EXIT_FAILURE);
 }

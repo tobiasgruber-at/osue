@@ -1,4 +1,12 @@
 /**
+ * @file strfun.h
+ * @author Tobias Gruber
+ * @date 12.10.2022
+ * @brief String functions module.
+ * @details Provides common utility functions for manipulating strings.
+ */
+
+/**
  * Removes the newline character at the end of a string.
  * @param src String that should be manipulated.
  */

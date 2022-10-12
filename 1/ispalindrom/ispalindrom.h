@@ -1,15 +1,23 @@
+/**
+ * @file ispalindrom.h
+ * @author Tobias Gruber
+ * @date 12.10.2022
+ * @brief The main module.
+ * @details The program reads files and performs a palindrom check on each line.
+ */
+
 int main(int argc, char *argv[]);
 
 /**
  * Performs a palindrom check for every line of a file.
  * @description Allocates memory for dst argument.
- * @param dst Pointer to the string that should be updated with an evaluation report of each line.
- * @param file Path to the file.
- * @param ignore_casing Whether letter casing should be ignored for the palindrom check.
+ * @param dst_p Pointer to the string that should be updated with an evaluation report of each line.
+ * @param file_path Path to the file.
+ * @param ignore_casing Whether letter cwasing should be ignored for the palindrom check.
  * @param ignore_whitespaces Whether whitespaces should be ignored for the palindrom check.
  * @return 0 if execution was fine, and -1 if there was an error.
  */
-int check_file(char **dst_p, char *file, int ignore_casing, int ignore_whitespaces);
+int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whitespaces);
 
 /**
  * Checks if a string is a palindrom.
@@ -18,8 +26,5 @@ int check_file(char **dst_p, char *file, int ignore_casing, int ignore_whitespac
  */
 int is_palindrom(char src[]);
 
-/**
- * Prints the usage of the program.
- * @param program_name Name of this program.
- */
-void print_usage(char program_name[]);
+/** Prints the usage of the program and exists with an error. */
+void usage(void);
