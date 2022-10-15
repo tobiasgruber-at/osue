@@ -18,46 +18,22 @@
 char *prog_name;
 
 int main(int argc, char *argv[]) {
-    int option, ignore_casing = 0, ignore_whitespaces = 0, output_to_file = 0;
-    char *output_file = NULL;
     prog_name = argv[0];
-    while((option = getopt(argc, argv, "sio:")) > 0) {
-        switch(option) {
-            case 's': {
-                ++ignore_whitespaces;
-                break;
-            }
-            case 'i': {
-                ++ignore_casing;
-                break;
-            }
-            case 'o': {
-                ++output_to_file;
-                output_file = optarg;
-                break;
-            }
-            case '?':
-            default: {
-                usage();
-            }
-        }
-    }
-    if (ignore_whitespaces > 1 || ignore_casing > 1 || output_to_file > 1) {
-        usage();
-    }
+    struct Options options = {0, 0, 0, NULL};
+    evaluate_options(argc, argv, &options);
     if (optind < argc) {
         char *output = NULL;
         for(; optind < argc; optind++){
             char *file_to_read = argv[optind];
-            if (check_file(&output, file_to_read, ignore_casing, ignore_whitespaces) == -1) {
+            if (evaluate_file(&output, file_to_read, &options) == -1) {
                 if (output != NULL) {
                     free(output);
                 }
                 exit(EXIT_FAILURE);
             }
         }
-        if (output_to_file) {
-            if (save_to_file(output_file, output) == -1) {
+        if (options.output_to_file) {
+            if (save_to_file(options.output_file, output) == -1) {
                 if (output != NULL) {
                     free(output);
                 }
@@ -73,7 +49,35 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whitespaces) {
+void evaluate_options(int argc, char *argv[], struct Options *options) {
+    int option;
+    while((option = getopt(argc, argv, "sio:")) > 0) {
+        switch(option) {
+            case 's': {
+                ++options->ignore_whitespaces;
+                break;
+            }
+            case 'i': {
+                ++options->ignore_casing;
+                break;
+            }
+            case 'o': {
+                ++options->output_to_file;
+                options->output_file = optarg;
+                break;
+            }
+            case '?':
+            default: {
+                usage();
+            }
+        }
+    }
+    if (options->ignore_whitespaces > 1 || options->ignore_casing > 1 || options->output_to_file > 1) {
+        usage();
+    }
+}
+
+int evaluate_file(char **dst_p, char *file_path, struct Options *options) {
     FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
         fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
@@ -89,12 +93,12 @@ int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whit
         if (strlen(evaluated) <= 0) {
             continue;
         }
-        if (ignore_whitespaces) {
+        if (options->ignore_whitespaces) {
             char temp[strlen(evaluated) + 1];
             strcpy(temp, evaluated);
             trim(evaluated, temp);
         }
-        if (ignore_casing) {
+        if (options->ignore_casing) {
             to_lower(evaluated);
         }
         char palindromSuffix[] = " is a palindrom\n";

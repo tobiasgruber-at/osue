@@ -6,18 +6,34 @@
  * @details The program reads files and performs a palindrom check on each line.
  */
 
+struct Options {
+    int ignore_casing;
+    int ignore_whitespaces;
+    int output_to_file;
+    char *output_file;
+};
+
+// TODO: add docs
 int main(int argc, char *argv[]);
 
 /**
+ * Evaluates the program options.
+ * @param argc Counter of the argument.
+ * @param argv Vector of the arguments.
+ * @param options Pointer to options that is updated.
+ */
+void evaluate_options(int argc, char *argv[], struct Options *options);
+
+/**
  * Performs a palindrom check for every line of a file.
- * @description Allocates memory for dst argument.
+ * @description Probably allocates memory for dst argument.
  * @param dst_p Pointer to the string that should be updated with an evaluation report of each line.
  * @param file_path Path to the file.
  * @param ignore_casing Whether letter cwasing should be ignored for the palindrom check.
  * @param ignore_whitespaces Whether whitespaces should be ignored for the palindrom check.
  * @return 0 if execution was fine, and -1 if there was an error.
  */
-int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whitespaces);
+int evaluate_file(char **dst_p, char *file_path, struct Options *options);
 
 /**
  * Checks if a string is a palindrom.
