@@ -26,5 +26,13 @@ int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whit
  */
 int is_palindrom(char src[]);
 
+/**
+ * Saves a given string to a file.
+ * @param file_path Path to the file.
+ * @param src String to write to the file.
+ * @return 0 if execution was fine, and -1 if there was an error.
+ */
+int save_to_file(char* file_path, char *src);
+
 /** Prints the usage of the program and exists with an error. */
 void usage(void);

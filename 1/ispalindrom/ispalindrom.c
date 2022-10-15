@@ -34,7 +34,6 @@ int main(int argc, char *argv[]) {
             case 'o': {
                 ++output_to_file;
                 output_file = optarg;
-                //printf("outputting to file: %s\n", output_file);
                 break;
             }
             case '?':
@@ -58,13 +57,18 @@ int main(int argc, char *argv[]) {
             }
         }
         if (output_to_file) {
-            // write to output file
+            if (save_to_file(output_file, output) == -1) {
+                if (output != NULL) {
+                    free(output);
+                }
+                exit(EXIT_FAILURE);
+            }
         } else {
             printf("%s", output);
         }
         free(output);
     } else {
-        //sscanf("%s", )
+        // TODO: read user input from stdin
     }
     return EXIT_SUCCESS;
 }
@@ -99,7 +103,7 @@ int check_file(char **dst_p, char *file_path, int ignore_casing, int ignore_whit
         strcpy(line_res, line);
         strcat(line_res, is_palindrom(evaluated) ? palindromSuffix : noPalindromSuffix);
         size_t dst_size = sizeof(char) * ((*dst_p == NULL ? 0 : strlen(*dst_p)) + strlen(line_res) + 1);
-        char *tmp = (char *) ((*dst_p == NULL) ? malloc(dst_size) : realloc(*dst_p, dst_size));
+        char *tmp = (char *) realloc(*dst_p, dst_size);
         if (tmp == NULL) {
             fclose(fp);
             free(line);
@@ -121,6 +125,20 @@ int is_palindrom(char src[]) {
         }
     }
     return 1;
+}
+
+int save_to_file(char* file_path, char *src) {
+    FILE *fp = fopen(file_path, "w");
+    if (fp == NULL) {
+        fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
+        return -1;
+    }
+    if (fputs(src, fp) == EOF) {
+        fprintf(stderr, "[%s] ERROR: fputs failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
+        return -1;
+    }
+    fclose(fp);
+    return 0;
 }
 
 void usage(void) {
