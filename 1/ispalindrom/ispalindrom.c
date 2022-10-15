@@ -21,19 +21,26 @@ int main(int argc, char *argv[]) {
     prog_name = argv[0];
     struct Options options = {0, 0, 0, NULL};
     evaluate_options(argc, argv, &options);
-    if (optind < argc) {
+    int has_input_files = optind < argc;
+    if (has_input_files) {
         char *output = NULL;
         for(; optind < argc; optind++){
-            char *file_to_read = argv[optind];
-            if (evaluate_file(&output, file_to_read, &options) == -1) {
+            char *file_path = argv[optind];
+            FILE *fp = fopen(file_path, "r");
+            if (fp == NULL) {
+                exit(EXIT_FAILURE);
+            }
+            if (evaluate_file(fp, 1, &output, &options) == -1) {
                 if (output != NULL) {
                     free(output);
                 }
+                fclose(fp);
                 exit(EXIT_FAILURE);
             }
+            fclose(fp);
         }
         if (options.output_to_file) {
-            if (save_to_file(options.output_file, output) == -1) {
+            if (append_to_file(options.output_file, output) == -1) {
                 if (output != NULL) {
                     free(output);
                 }
@@ -42,9 +49,10 @@ int main(int argc, char *argv[]) {
         } else {
             printf("%s", output);
         }
-        free(output);
     } else {
-        // TODO: read user input from stdin
+        if (evaluate_file(stdin, 0, NULL, &options) == -1) {
+            exit(EXIT_FAILURE);
+        }
     }
     return EXIT_SUCCESS;
 }
@@ -77,12 +85,7 @@ void evaluate_options(int argc, char *argv[], struct Options *options) {
     }
 }
 
-int evaluate_file(char **dst_p, char *file_path, struct Options *options) {
-    FILE *fp = fopen(file_path, "r");
-    if (fp == NULL) {
-        fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
-        return -1;
-    }
+int evaluate_file(FILE *fp, int output_type, char **dst_p, struct Options *options) {
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
@@ -106,19 +109,27 @@ int evaluate_file(char **dst_p, char *file_path, struct Options *options) {
         char line_res[strlen(line) + strlen(noPalindromSuffix) + 1];
         strcpy(line_res, line);
         strcat(line_res, is_palindrom(evaluated) ? palindromSuffix : noPalindromSuffix);
-        size_t dst_size = sizeof(char) * ((*dst_p == NULL ? 0 : strlen(*dst_p)) + strlen(line_res) + 1);
-        char *tmp = (char *) realloc(*dst_p, dst_size);
-        if (tmp == NULL) {
-            fclose(fp);
-            free(line);
-            fprintf(stderr, "[%s] ERROR: malloc failed: %s\n", prog_name, strerror(errno));
-            return -1;
+        if (output_type == 0) {
+            printf("%s", line_res);
+            if (options->output_file != NULL) {
+                if (append_to_file(options->output_file, line_res) == -1) {
+                    free(line);
+                    return -1;
+                }
+            }
+        } else if (output_type == 1) {
+            size_t dst_size = sizeof(char) * ((*dst_p == NULL ? 0 : strlen(*dst_p)) + strlen(line_res) + 1);
+            char *tmp = (char *) realloc(*dst_p, dst_size);
+            if (tmp == NULL) {
+                free(line);
+                fprintf(stderr, "[%s] ERROR: malloc failed: %s\n", prog_name, strerror(errno));
+                return -1;
+            }
+            *dst_p = tmp;
+            strcat(*dst_p, line_res);
         }
-        *dst_p = tmp;
-        strcat(*dst_p, line_res);
     }
     free(line);
-    fclose(fp);
     return 0;
 }
 
@@ -131,13 +142,13 @@ int is_palindrom(char src[]) {
     return 1;
 }
 
-int save_to_file(char* file_path, char *src) {
-    FILE *fp = fopen(file_path, "w");
+int append_to_file(char* file_path, char *src) {
+    FILE *fp = fopen(file_path, "a");
     if (fp == NULL) {
         fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
         return -1;
     }
-    if (fputs(src, fp) == EOF) {
+    if (fprintf(fp, "%s", src) == EOF) {
         fprintf(stderr, "[%s] ERROR: fputs failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
         return -1;
     }

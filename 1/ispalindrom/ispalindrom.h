@@ -6,6 +6,8 @@
  * @details The program reads files and performs a palindrom check on each line.
  */
 
+#include <stdio.h>
+
 struct Options {
     int ignore_casing;
     int ignore_whitespaces;
@@ -27,13 +29,15 @@ void evaluate_options(int argc, char *argv[], struct Options *options);
 /**
  * Performs a palindrom check for every line of a file.
  * @description Probably allocates memory for dst argument.
- * @param dst_p Pointer to the string that should be updated with an evaluation report of each line.
- * @param file_path Path to the file.
- * @param ignore_casing Whether letter cwasing should be ignored for the palindrom check.
- * @param ignore_whitespaces Whether whitespaces should be ignored for the palindrom check.
+ * @param fp Pointer to the file.
+ * @param output_type 0 if the evaluation should be outputted after each line, and 1 if it should be
+ * written to dst_p.
+ * @param dst_p Pointer to the string that should be updated with an evaluation report of each line iff immediate
+ * output is 1.
+ * @param options Program options.
  * @return 0 if execution was fine, and -1 if there was an error.
  */
-int evaluate_file(char **dst_p, char *file_path, struct Options *options);
+int evaluate_file(FILE *fp, int output_type, char **dst_p, struct Options *options);
 
 /**
  * Checks if a string is a palindrom.
@@ -43,12 +47,12 @@ int evaluate_file(char **dst_p, char *file_path, struct Options *options);
 int is_palindrom(char src[]);
 
 /**
- * Saves a given string to a file.
+ * Appends a given string to a file.
  * @param file_path Path to the file.
  * @param src String to write to the file.
  * @return 0 if execution was fine, and -1 if there was an error.
  */
-int save_to_file(char* file_path, char *src);
+int append_to_file(char* file_path, char *src);
 
 /** Prints the usage of the program and exists with an error. */
 void usage(void);
