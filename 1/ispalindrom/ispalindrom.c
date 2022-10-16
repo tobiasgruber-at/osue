@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
         } else {
             printf("%s", output);
         }
+        free(output);
     } else {
         if (evaluate_file(stdin, 0, NULL, &options) == -1) {
             exit(EXIT_FAILURE);
@@ -118,6 +119,7 @@ int evaluate_file(FILE *fp, int output_type, char **dst_p, struct Options *optio
                 }
             }
         } else if (output_type == 1) {
+            int dst_empty = *dst_p == NULL;
             size_t dst_size = sizeof(char) * ((*dst_p == NULL ? 0 : strlen(*dst_p)) + strlen(line_res) + 1);
             char *tmp = (char *) realloc(*dst_p, dst_size);
             if (tmp == NULL) {
@@ -126,7 +128,11 @@ int evaluate_file(FILE *fp, int output_type, char **dst_p, struct Options *optio
                 return -1;
             }
             *dst_p = tmp;
-            strcat(*dst_p, line_res);
+            if (dst_empty) {
+                strcpy(*dst_p, line_res);
+            } else {
+                strcat(*dst_p, line_res);
+            }
         }
     }
     free(line);
