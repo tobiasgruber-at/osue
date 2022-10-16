@@ -12,7 +12,8 @@ struct Options {
     int ignore_casing;
     int ignore_whitespaces;
     int output_to_file;
-    char *output_file;
+    char *output_path;
+    FILE *output_fp;
 };
 
 // TODO: add docs
@@ -30,14 +31,12 @@ void evaluate_options(int argc, char *argv[], struct Options *options);
  * Performs a palindrom check for every line of a file.
  * @description Probably allocates memory for dst argument.
  * @param fp Pointer to the file.
- * @param output_type 0 if the evaluation should be outputted after each line, and 1 if it should be
- * written to dst_p.
  * @param dst_p Pointer to the string that should be updated with an evaluation report of each line iff immediate
  * output is 1.
  * @param options Program options.
  * @return 0 if execution was fine, and -1 if there was an error.
  */
-int evaluate_file(FILE *fp, int output_type, char **dst_p, struct Options *options);
+int evaluate_file(FILE *fp, struct Options *options);
 
 /**
  * Checks if a string is a palindrom.
