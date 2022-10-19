@@ -9,10 +9,13 @@
 #include <string.h>
 #include <ctype.h>
 
+#define ASCII_NEW_LINE 10
+#define ASCII_SPACE 32
+
 void trim(char res[], char *src) {
-    int res_i = 0;
+    int res_i = 0; /**< Current write-index of res. */
     for (int i = 0; i < strlen(src); ++i) {
-        if (src[i] != 32) {
+        if (src[i] != ASCII_SPACE) {
             res[res_i] = src[i];
             res_i++;
         }
@@ -21,7 +24,7 @@ void trim(char res[], char *src) {
 }
 
 void remove_newline(char src[]) {
-    if (src[strlen(src) - 1] == 10) {
+    if (src[strlen(src) - 1] == ASCII_NEW_LINE) {
         src[strlen(src) - 1] = '\0';
     }
 }

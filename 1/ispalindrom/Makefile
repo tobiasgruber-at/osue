@@ -11,7 +11,7 @@ ispalindrom: ispalindrom.o strfun.o
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-ispalindrom.o: ispalindrom.c ispalindrom.h strfun.h
+ispalindrom.o: ispalindrom.c strfun.h
 strfun.o: strfun.c strfun.h
 
 clean:

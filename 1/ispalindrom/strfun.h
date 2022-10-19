@@ -7,20 +7,24 @@
  */
 
 /**
- * Removes the newline character at the end of a string.
+ * @brief Removes the newline at the end of a string.
+ * @details Replaces the newline character at the end of src with a null terminator.
  * @param src String that should be manipulated.
  */
 void remove_newline(char src[]);
 
 /**
- * Removes all whitespaces from a string.
- * @param res String to be updated. Must have sufficient space.
- * @param line Source string to be trimmed.
+ * @brief Removes all whitespaces from a string.
+ * @details Copies each character, that is no whitespace, from src to res.<br>
+ * Note that res must provide sufficient space.
+ * @param res String where the result is written to.
+ * @param src Source string to be evaluated.
  */
 void trim(char res[], char src[]);
 
 /**
- * Converts all chars of a string to lower case.
+ * @brief Converts all chars of a string to lower case.
+ * @brief Replaces each character of src with its' lowercase version.
  * @param src String to be updated.
  */
 void to_lower(char src[]);
