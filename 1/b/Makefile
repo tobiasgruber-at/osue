@@ -12,11 +12,14 @@ all: supervisor generator
 supervisor: supervisor.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
-generator: generator.o
+generator: generator.o graph.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+generator.o: generator.c graph.h
+graph.o: graph.c graph.h
 
 clean:
 	rm -rf *.o supervisor generator
