@@ -7,53 +7,47 @@
  * @details Only adds if it does not already exist.
  */
 static void add_vertex(graph_t *g, int idx) {
-    vertex_t *cur = g->v_head;
-    for (; cur; cur = cur->next) {
-        if (cur->idx == idx) return;
+    for (int i = 0; i < g->vertices_count; i++) {
+        if (g->vertices[i]->idx == idx) return;
     }
-    vertex_t *prev = g->v_head;
-    g->v_head = malloc(sizeof(vertex_t));
-    g->v_head->idx = idx;
-    g->v_head->next = prev;
+    vertex_t **new = &g->vertices[g->vertices_count++];
+    *new = (vertex_t*) malloc(sizeof(vertex_t));
+    (*new)->idx = idx;
 }
 
 void add_edge(graph_t *g, int start, int end) {
-    edge_t *cur = g->e_head;
-    for (; cur; cur = cur->next) {
+    for (int i = 0; i < g->edges_count; i++) {
+        edge_t *cur = g->edges[i];
         if (cur->start == start && cur->end == end) return;
     }
-    edge_t *prev = g->e_head;
-    g->e_head = malloc(sizeof(edge_t));
-    g->e_head->start = start;
-    g->e_head->end = end;
-    g->e_head->next = prev;
+    edge_t **new = &g->edges[g->edges_count++];
+    *new = (edge_t*) malloc(sizeof(edge_t));
+    (*new)->start = start;
+    (*new)->end = end;
     add_vertex(g, start);
     add_vertex(g, end);
 }
 
-void print(graph_t *g) {
-    vertex_t *cur_v = g->v_head;
+void print_graph(graph_t *g) {
     printf("Vertices: ");
-    for (; cur_v; cur_v = cur_v->next) {
-        printf("%i, ", cur_v->idx);
+    for (int i = 0; i < g->vertices_count; i++) {
+        printf("%i, ", g->vertices[i]->idx);
     }
-    edge_t *cur_e = g->e_head;
     printf("\nEdges: ");
-    for (; cur_e; cur_e = cur_e->next) {
-        printf("(%i-%i), ", cur_e->start, cur_e->end);
+    for (int i = 0; i < g->edges_count; i++) {
+        edge_t *cur = g->edges[i];
+        printf("(%i-%i), ", cur->start, cur->end);
     }
     printf("\n");
 }
 
 void free_graph(graph_t *g) {
-    while(g->v_head) {
-        vertex_t *next = g->v_head->next;
-        free(g->v_head);
-        g->v_head = next;
+    for (int i = 0; i < g->vertices_count; i++) {
+        free(g->vertices[i]);
     }
-    while(g->e_head) {
-        edge_t *next = g->e_head->next;
-        free(g->e_head);
-        g->e_head = next;
+    free(g->vertices);
+    for (int i = 0; i < g->edges_count; i++) {
+        free(g->edges[i]);
     }
+    free(g->edges);
 }
