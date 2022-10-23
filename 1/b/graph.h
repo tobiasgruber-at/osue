@@ -3,13 +3,9 @@ typedef struct Edge {
     int end;
 } edge_t;
 
-typedef struct Vertex {
-    int idx;
-} vertex_t;
-
 typedef struct Graph {
     struct Edge **edges;
-    struct Vertex **vertices;
+    int *vertices;
     int edges_count, vertices_count;
 } graph_t;
 
@@ -24,3 +20,9 @@ void print_graph(graph_t *g);
 
 /** Frees all allocated memory of a graph. */
 void free_graph(graph_t *g);
+
+/**
+ * @brief Shuffles a list of numbers.
+ * @details Makes use of the Fisher-Yates algorithm.
+ */
+int shuffle(int src[], int size);

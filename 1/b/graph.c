@@ -8,11 +8,9 @@
  */
 static void add_vertex(graph_t *g, int idx) {
     for (int i = 0; i < g->vertices_count; i++) {
-        if (g->vertices[i]->idx == idx) return;
+        if (g->vertices[i] == idx) return;
     }
-    vertex_t **new = &g->vertices[g->vertices_count++];
-    *new = (vertex_t*) malloc(sizeof(vertex_t));
-    (*new)->idx = idx;
+    g->vertices[g->vertices_count++] = idx;
 }
 
 void add_edge(graph_t *g, int start, int end) {
@@ -31,7 +29,7 @@ void add_edge(graph_t *g, int start, int end) {
 void print_graph(graph_t *g) {
     printf("Vertices: ");
     for (int i = 0; i < g->vertices_count; i++) {
-        printf("%i, ", g->vertices[i]->idx);
+        printf("%i, ", g->vertices[i]);
     }
     printf("\nEdges: ");
     for (int i = 0; i < g->edges_count; i++) {
@@ -42,12 +40,18 @@ void print_graph(graph_t *g) {
 }
 
 void free_graph(graph_t *g) {
-    for (int i = 0; i < g->vertices_count; i++) {
-        free(g->vertices[i]);
-    }
-    free(g->vertices);
     for (int i = 0; i < g->edges_count; i++) {
         free(g->edges[i]);
     }
     free(g->edges);
+    free(g->vertices);
+}
+
+int shuffle(int src[], int size) {
+    for (int i = size - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = src[i];
+        src[i] = src[j];
+        src[j] = temp;
+    }
 }
