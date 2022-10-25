@@ -25,4 +25,13 @@ void free_graph(graph_t *g);
  * @brief Shuffles a list of numbers.
  * @details Makes use of the Fisher-Yates algorithm.
  */
-int shuffle(int src[], int size);
+void shuffle(int src[], int size);
+
+/**
+ * Checks edge (u,v) fulfills that index of u > index of v for a given order.
+ * @param order Order of the vertices.
+ * @param count Count of the vertices.
+ * @param e Edge to be checked.
+ * @return 0 if u > v, 1 if u \<= v, -1 if order of both not specified.
+ */
+int is_after(int *order, int count, edge_t *e);
