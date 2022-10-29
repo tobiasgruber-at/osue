@@ -9,19 +9,19 @@ LDFLAGS = -lrt -pthread # linker flags
 .PHONY: all clean valg
 all: supervisor generator
 
-supervisor: supervisor.o shm.o
+supervisor: supervisor.o shm.o graph.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-generator: generator.o graph.o shm.o
+generator: generator.o shm.o graph.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 supervisor.o: supervisor.c shm.h
-generator.o: generator.c graph.h shm.h
+generator.o: generator.c shm.h
+shm.o: shm.c shm.h graph.h
 graph.o: graph.c graph.h
-shm.o: shm.c shm.h
 
 clean:
 	rm -rf *.o supervisor generator

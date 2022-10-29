@@ -1,3 +1,4 @@
+#include "graph.h"
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -7,18 +8,33 @@
 #include <semaphore.h>
 
 #define SHM_NAME "/fac_shm"
-#define SEM_NAME "fac_buffer"
-#define MAX_DATA (50)
+#define CB_SEM "fac_cb"
+#define CB_FREE_SEM "fac_cb_read"
+#define CB_USED_SEM "fac_cb_used"
+#define CB_MAX_LEN (50)
+#define FAC_MAX_LEN (8)
+
+typedef struct SemaphoreMap {
+    sem_t *cb;
+    sem_t *cb_used;
+    sem_t *cb_free;
+} sem_map_t;
 
 typedef struct SharedMemory {
-    unsigned int state;
-    unsigned int data[MAX_DATA];
+    unsigned int active;
+    unsigned int wr_i;
+    unsigned int rd_i;
+    edge_t cb[CB_MAX_LEN][FAC_MAX_LEN]; /**< Circular buffer. */
 } shm_t;
 
 int open_shm(int init, int *shm_fd, shm_t **shm_p);
 
-int close_shm(int destroy, int shm_fd, int shm_size);
+int close_shm(int destroy, int shm_fd);
 
-int open_sem(int init, sem_t **sem_p);
+int open_all_sem(int init, sem_map_t *sem_map);
 
-int close_sem(int destroy, sem_t *sem);
+int close_all_sem(int destroy, sem_map_t *sem_map);
+
+int push_cb(edge_t fac[FAC_MAX_LEN], shm_t *shm, sem_map_t *sem_map);
+
+int read_cb(shm_t *shm, sem_map_t *sem_map, char *dist);

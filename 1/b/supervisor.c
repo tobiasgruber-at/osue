@@ -5,9 +5,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <errno.h>
-#include <unistd.h>
 #include <signal.h>
-#include <semaphore.h>
 
 static char *prog_name; /**> The programs name. */
 
@@ -17,11 +15,12 @@ void handle_interrupt(int signal) {
     quit = 1;
 }
 
-void register_sighandler(void) {
+void register_sighandler() {
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = handle_interrupt;
     sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 }
 
 /**
@@ -41,27 +40,25 @@ static void exit_err(char *fun_name) {
 }
 
 int main(int argc, char **argv) {
-    register_sighandler();
     prog_name = argv[0];
     if (optind < argc) usage();
-    int shm_fd = 0;
+    int shm_fd;
     shm_t *shm;
-    if (open_shm(1, &shm_fd, &shm) == -1) exit_err("init_shm");
-    sem_t *sem;
-    if (open_sem(1, &sem) == -1) {
-        close_shm(1, shm_fd, sizeof(*shm));
-        exit_err("init_sem");
+    if (open_shm(1, &shm_fd, &shm) == -1) exit_err("open_shm");
+    register_sighandler();
+    sem_map_t sem_map = {NULL, NULL, NULL};
+    if (open_all_sem(1, &sem_map) == -1) {
+        close_shm(1, shm_fd);
+        exit_err("open_all_sem");
     }
-    int i = 0;
     while (!quit) {
-        sleep(1);
-        shm->data[0] = i++;
-        printf("%i\n", shm->data[0]);
+        read_cb(shm, &sem_map, NULL);
     }
-    if (close_sem(1, sem) == -1) {
-        close_shm(1, shm_fd, sizeof(*shm));
-        exit_err("destroy_sem");
+    shm->active = 0;
+    if (close_all_sem(1, &sem_map) == -1) {
+        close_shm(1, shm_fd);
+        exit_err("close_all_sem");
     }
-    if (close_shm(1, shm_fd, sizeof(*shm)) == -1) exit_err("destroy_shm");
+    if (close_shm(1, shm_fd) == -1) exit_err("close_shm");
     return EXIT_SUCCESS;
 }

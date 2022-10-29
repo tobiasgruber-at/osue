@@ -1,4 +1,3 @@
-#include "graph.h"
 #include "shm.h"
 #include <stdio.h>
 #include <getopt.h>
@@ -7,10 +6,6 @@
 #include <string.h>
 #include <stddef.h>
 #include <errno.h>
-#include <sys/types.h>
-#include <semaphore.h>
-
-#define SEM_NAME "fac_buffer"
 
 static char *prog_name; /**> The programs name. */
 
@@ -71,22 +66,16 @@ static void generate_fas(graph_t *g, edge_t **fas, int *size) {
     }
 }
 
-static int search_smallest_fas(graph_t *g, sem_t *sem) {
+static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
     edge_t **fas = (edge_t**) malloc(sizeof(edge_t*) * g->edges_count);
     if (fas == NULL) return -1;
-    int j = 0;
-    while (j++ < 10) {
+    while (shm->active == 1) {
         shuffle(g->vertices, g->vertices_count);
         int fas_size = 0;
         generate_fas(g, fas, &fas_size);
-
-        sem_wait(sem);
-        printf("[%i] FAS: ", getpid());
-        for (int i = 0; i < fas_size; i++) {
-            printf("(%i-%i) ", fas[i]->start, fas[i]->end);
+        if (fas_size <= FAC_MAX_LEN) {
+            if (push_cb(NULL, shm, sem_map) == -1) exit_err("push_cb");
         }
-        printf("\n");
-        sem_post(sem);
     }
     free(fas);
     return 0;
@@ -95,20 +84,30 @@ static int search_smallest_fas(graph_t *g, sem_t *sem) {
 int main(int argc, char **argv) {
     prog_name = argv[0];
     if (optind >= argc) usage();
-    sem_t *sem;
-    if (open_sem(0, &sem) == -1) exit_err("open_sem");
+    int shm_fd;
+    shm_t *shm;
+    if (open_shm(0, &shm_fd, &shm) == -1) exit_err("open_shm");
+    sem_map_t sem_map = {NULL, NULL, NULL};
+    if (open_all_sem(0, &sem_map) == -1) {
+        close_shm(0, shm_fd);
+        exit_err("open_all_sem");
+    }
     struct Graph g = {NULL, NULL};
     if (init_graph(&g, argc, argv) == -1) {
-        close_sem(0, sem);
+        close_all_sem(0, &sem_map);
         exit_err("init_graph");
     }
     srand(getpid());
-    if (search_smallest_fas(&g, sem) == -1) {
-        close_sem(0, sem);
+    if (search_smallest_fas(&g, shm, &sem_map) == -1) {
+        close_all_sem(0, &sem_map);
         free_graph(&g);
         exit_err("search_smallest_fas");
     }
     free_graph(&g);
-    if (close_sem(0, sem) < 0) exit_err("close_sem");
+    if (close_all_sem(0, &sem_map) < 0) {
+        close_shm(0, shm_fd);
+        exit_err("close_all_sem");
+    }
+    if (close_shm(0, shm_fd) == -1) exit_err("close_shm");
     return EXIT_SUCCESS;
 }
