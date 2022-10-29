@@ -4,16 +4,16 @@
 CC = gcc # c compiler
 DEFS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_POSIX_C_SOURCE=200809L # definitions
 CFLAGS = -Wall -g -std=c99 -pedantic $(DEFS) # compiler flags
-LDFLAGS = # linker flags
+LDFLAGS = -lrt -pthread # linker flags
 
 .PHONY: all clean valg
 all: supervisor generator
 
 supervisor: supervisor.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 generator: generator.o graph.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
