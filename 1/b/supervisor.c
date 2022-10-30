@@ -10,10 +10,30 @@ char *prog_name;
 
 volatile sig_atomic_t quit = 0;
 
+/**
+ * @brief Prints the usage of the program and exists.
+ * @details Usage is printed to stderr. Exits the program with EXIT_FAILURE.<br>
+ * Error handling of fprintf is not covered as the program has to exit anyway.<br>
+ * Used global variables: prog_name
+ */
+static void usage(void) {
+    fprintf(stderr, "Usage: %s\n", prog_name);
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * @brief Handles an interrupt.
+ * @details Instructs the program to quit by setting the global variable quit to 1.<br>
+ * Used global variables: quit
+ * @param signal
+ */
 static void handle_interrupt(int signal) {
     quit = 1;
 }
 
+/**
+ * @brief Registers necessary sighandlers.
+ */
 static void register_sighandler(void) {
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
@@ -23,16 +43,12 @@ static void register_sighandler(void) {
 }
 
 /**
- * @brief Prints the usage of the program to stderr and exists with an error.
- * @details Exits the program with EXIT_FAILURE.<br>
- * Error handling of fprintf is not covered as the program has to exit anyway.<br>
- * Used global variables: prog_name
+ * @brief Searches the smallest feedback arc set.
+ * @details Reads from the circular buffer in the shared memory.
+ * @param shm Pointer to the shared memory.
+ * @param sem_map Pointer to the semaphore map.
+ * @return 0 on success, -1 on error.
  */
-static void usage(void) {
-    fprintf(stderr, "Usage: %s\n", prog_name);
-    exit(EXIT_FAILURE);
-}
-
 static int search_smallest_fas(shm_t *shm, sem_map_t *sem_map) {
     int smallest_fac_size = FAC_MAX_LEN + 1;
     while (!quit) {

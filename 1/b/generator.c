@@ -18,6 +18,14 @@ static void usage(void) {
     exit(EXIT_FAILURE);
 }
 
+/**
+ * @brief Initialised the graph.
+ * @details Constructs the graph by interpreting the programs' arguments.
+ * @param g Pointer to the graph that will be updated.
+ * @param argc Programs' argument counter.
+ * @param argv Programs' argument vector.
+ * @return 0 on success, -1 on error.
+ */
 static int init_graph(graph_t *g, int argc, char **argv) {
     int edges_upper = argc - optind; /**< Upper bound for edges count. */
     int vertices_upper = edges_upper * 2; /**< Upper bound for vertices count. */
@@ -27,10 +35,10 @@ static int init_graph(graph_t *g, int argc, char **argv) {
     if (g->edges == NULL) return t_err("malloc");
     for(; optind < argc; optind++){
         char *edge = argv[optind];
-        int start, end;
+        edge_t e = {0, 0};
         // TODO: format handling - use strtol
-        if (sscanf(edge, "%i-%i", &start, &end) < 0) usage();
-        add_edge(g, start, end);
+        if (sscanf(edge, "%i-%i", &e.start, &e.end) < 0) usage();
+        add_edge(g, &e);
     }
     if (g->edges_count < edges_upper) {
         g->edges = (edge_t**) realloc(g->edges, sizeof(edge_t*) * g->edges_count);
@@ -42,12 +50,12 @@ static int init_graph(graph_t *g, int argc, char **argv) {
 }
 
 /**
- * Gets the feedback arc set (fas) of a graph.
- * @details fas must reserve as much memory as the graphs' edges.<br>
+ * @brief Gets a feedback arc set of a graph.
+ * @details The feedback arc set must reserve as much memory as the graphs' edges.<br>
  * TODO: describe algorithm
  * @param g Pointer to source graph
- * @param fas Pointer to fas
- * @param size Pointer to size of fas
+ * @param fas Pointer to the feedback arc set.
+ * @param size Pointer that will be updated with the size of the feedback arc set.
  */
 static void generate_fas(graph_t *g, edge_t **fas, int *size) {
     *size = 0;
@@ -59,6 +67,14 @@ static void generate_fas(graph_t *g, edge_t **fas, int *size) {
     }
 }
 
+/**
+ * @brief Searches for the smallest feedback arc set.
+ * @details Continuously looks for feedback arc sets and pushes them to the circular buffer in the shared memory.
+ * @param g Pointer to the graph.
+ * @param shm Pointer to the shared memory.
+ * @param sem_map Pointer to the semaphore map.
+ * @return 0 on success, -1 on error.
+ */
 static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
     edge_t **fas = (edge_t**) malloc(sizeof(edge_t*) * g->edges_count);
     if (fas == NULL) return t_err("malloc");
@@ -72,6 +88,7 @@ static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
             for (int i = 0; i < fas_size; i++) {
                 cbi.fas[i] = *fas[i];
             }
+            // TODO: check why sometimes not stopping: e.g../generator 1-2 2-3 3-4 4-5 5-6 6-7 7-8 8-9 9-10
             if (push_cb(cbi, shm, sem_map) == -1) e_err("push_cb");
         }
     }
