@@ -56,10 +56,10 @@ static int search_smallest_fas(shm_t *shm, sem_map_t *sem_map) {
         cbi.size = FAC_MAX_LEN + 1;
         if (read_cb(shm, sem_map, &cbi) == -1) return t_err("read_cb");
         if (cbi.size == 0) {
-            printf("The graph is acyclic!\n");
+            printf("[%s] The graph is acyclic!\n", prog_name);
             quit = 1;
         } else if (cbi.size < smallest_fac_size) {
-            printf("Solution with %i edges: ", cbi.size);
+            printf("[%s] Solution with %i edges: ", prog_name, cbi.size);
             for (int i = 0; i < cbi.size; i++) {
                 printf("%i-%i ", cbi.fas[i].start, cbi.fas[i].end);
             }
