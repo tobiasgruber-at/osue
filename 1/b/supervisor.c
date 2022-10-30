@@ -4,18 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <errno.h>
 #include <signal.h>
 
-static char *prog_name; /**> The programs name. */
+char *prog_name;
 
 volatile sig_atomic_t quit = 0;
 
-void handle_interrupt(int signal) {
+static void handle_interrupt(int signal) {
     quit = 1;
 }
 
-void register_sighandler() {
+static void register_sighandler(void) {
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = handle_interrupt;
@@ -34,9 +33,25 @@ static void usage(void) {
     exit(EXIT_FAILURE);
 }
 
-static void exit_err(char *fun_name) {
-    fprintf(stderr, "[%s] %s failed: %s\n", prog_name, fun_name, strerror(errno));
-    exit(EXIT_FAILURE);
+static int search_smallest_fas(shm_t *shm, sem_map_t *sem_map) {
+    int smallest_fac_size = FAC_MAX_LEN + 1;
+    while (!quit) {
+        cbi_t cbi; // malloc?
+        cbi.size = FAC_MAX_LEN + 1;
+        if (read_cb(shm, sem_map, &cbi) == -1) return t_err("read_cb");
+        if (cbi.size == 0) {
+            printf("The graph is acyclic!\n");
+            quit = 1;
+        } else if (cbi.size < smallest_fac_size) {
+            printf("Solution with %i edges: ", cbi.size);
+            for (int i = 0; i < cbi.size; i++) {
+                printf("%i-%i ", cbi.fas[i].start, cbi.fas[i].end);
+            }
+            printf("\n");
+            smallest_fac_size = cbi.size;
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -44,21 +59,23 @@ int main(int argc, char **argv) {
     if (optind < argc) usage();
     int shm_fd;
     shm_t *shm;
-    if (open_shm(1, &shm_fd, &shm) == -1) exit_err("open_shm");
+    if (open_shm(1, &shm_fd, &shm) == -1) e_err("open_shm");
     register_sighandler();
     sem_map_t sem_map = {NULL, NULL, NULL};
     if (open_all_sem(1, &sem_map) == -1) {
         close_shm(1, shm_fd);
-        exit_err("open_all_sem");
+        e_err("open_all_sem");
     }
-    while (!quit) {
-        read_cb(shm, &sem_map, NULL);
-    }
+    if (search_smallest_fas(shm, &sem_map) == -1) {
+        close_all_sem(1, &sem_map);
+        close_shm(1, shm_fd);
+        e_err("search_smallest_fas");
+    };
     shm->active = 0;
     if (close_all_sem(1, &sem_map) == -1) {
         close_shm(1, shm_fd);
-        exit_err("close_all_sem");
+        e_err("close_all_sem");
     }
-    if (close_shm(1, shm_fd) == -1) exit_err("close_shm");
+    if (close_shm(1, shm_fd) == -1) e_err("close_shm");
     return EXIT_SUCCESS;
 }

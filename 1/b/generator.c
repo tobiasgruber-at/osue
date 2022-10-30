@@ -3,11 +3,9 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <stddef.h>
-#include <errno.h>
 
-static char *prog_name; /**> The programs name. */
+char *prog_name;
 
 /**
  * @brief Prints the usage of the program to stderr and exists with an error.
@@ -20,22 +18,17 @@ static void usage(void) {
     exit(EXIT_FAILURE);
 }
 
-static void exit_err(char *fun_name) {
-    fprintf(stderr, "[%s] %s failed: %s\n", prog_name, fun_name, strerror(errno));
-    exit(EXIT_FAILURE);
-}
-
 static int init_graph(graph_t *g, int argc, char **argv) {
     int edges_upper = argc - optind; /**< Upper bound for edges count. */
     int vertices_upper = edges_upper * 2; /**< Upper bound for vertices count. */
     g->edges = (edge_t**) malloc(sizeof(edge_t*) * edges_upper);
-    if (g->edges == NULL) return -1;
+    if (g->edges == NULL) return t_err("malloc");
     g->vertices = (int*) malloc(sizeof(int) * vertices_upper);
-    if (g->edges == NULL) return -1;
+    if (g->edges == NULL) return t_err("malloc");
     for(; optind < argc; optind++){
-        // TODO: format handling
         char *edge = argv[optind];
         int start, end;
+        // TODO: format handling - use strtol
         if (sscanf(edge, "%i-%i", &start, &end) < 0) usage();
         add_edge(g, start, end);
     }
@@ -68,13 +61,18 @@ static void generate_fas(graph_t *g, edge_t **fas, int *size) {
 
 static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
     edge_t **fas = (edge_t**) malloc(sizeof(edge_t*) * g->edges_count);
-    if (fas == NULL) return -1;
+    if (fas == NULL) return t_err("malloc");
     while (shm->active == 1) {
         shuffle(g->vertices, g->vertices_count);
         int fas_size = 0;
         generate_fas(g, fas, &fas_size);
         if (fas_size <= FAC_MAX_LEN) {
-            if (push_cb(NULL, shm, sem_map) == -1) exit_err("push_cb");
+            cbi_t cbi;
+            cbi.size = fas_size;
+            for (int i = 0; i < fas_size; i++) {
+                cbi.fas[i] = *fas[i];
+            }
+            if (push_cb(cbi, shm, sem_map) == -1) e_err("push_cb");
         }
     }
     free(fas);
@@ -86,28 +84,28 @@ int main(int argc, char **argv) {
     if (optind >= argc) usage();
     int shm_fd;
     shm_t *shm;
-    if (open_shm(0, &shm_fd, &shm) == -1) exit_err("open_shm");
+    if (open_shm(0, &shm_fd, &shm) == -1) e_err("open_shm");
     sem_map_t sem_map = {NULL, NULL, NULL};
     if (open_all_sem(0, &sem_map) == -1) {
         close_shm(0, shm_fd);
-        exit_err("open_all_sem");
+        e_err("open_all_sem");
     }
     struct Graph g = {NULL, NULL};
     if (init_graph(&g, argc, argv) == -1) {
         close_all_sem(0, &sem_map);
-        exit_err("init_graph");
+        e_err("init_graph");
     }
     srand(getpid());
     if (search_smallest_fas(&g, shm, &sem_map) == -1) {
         close_all_sem(0, &sem_map);
         free_graph(&g);
-        exit_err("search_smallest_fas");
+        e_err("search_smallest_fas");
     }
     free_graph(&g);
     if (close_all_sem(0, &sem_map) < 0) {
         close_shm(0, shm_fd);
-        exit_err("close_all_sem");
+        e_err("close_all_sem");
     }
-    if (close_shm(0, shm_fd) == -1) exit_err("close_shm");
+    if (close_shm(0, shm_fd) == -1) e_err("close_shm");
     return EXIT_SUCCESS;
 }

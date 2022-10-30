@@ -20,11 +20,16 @@ typedef struct SemaphoreMap {
     sem_t *cb_free;
 } sem_map_t;
 
+typedef struct CircularBufferItem {
+    int size;
+    edge_t fas[FAC_MAX_LEN];
+} cbi_t;
+
 typedef struct SharedMemory {
     unsigned int active;
     unsigned int wr_i;
     unsigned int rd_i;
-    edge_t cb[CB_MAX_LEN][FAC_MAX_LEN]; /**< Circular buffer. */
+    cbi_t cb[CB_MAX_LEN]; /**< Circular buffer. */
 } shm_t;
 
 int open_shm(int init, int *shm_fd, shm_t **shm_p);
@@ -35,6 +40,6 @@ int open_all_sem(int init, sem_map_t *sem_map);
 
 int close_all_sem(int destroy, sem_map_t *sem_map);
 
-int push_cb(edge_t fac[FAC_MAX_LEN], shm_t *shm, sem_map_t *sem_map);
+int push_cb(cbi_t cbi, shm_t *shm, sem_map_t *sem_map);
 
-int read_cb(shm_t *shm, sem_map_t *sem_map, char *dist);
+int read_cb(shm_t *shm, sem_map_t *sem_map, cbi_t *dist);
