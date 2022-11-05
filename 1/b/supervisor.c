@@ -28,7 +28,7 @@ static void usage(void) {
  * @param signal
  */
 static void handle_interrupt(int signal) {
-    quit = 1;
+    if (signal == SIGINT || signal == SIGTERM) quit = 1;
 }
 
 /**

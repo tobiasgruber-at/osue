@@ -63,7 +63,7 @@ int close_shm(int destroy, int shm_fd);
 int open_all_sem(int init, sem_map_t *sem_map);
 
 /**
- * @brief Closes all semaphores.
+ * @brief Closes all semaphores if they are opened.
  * @param destroy 1 to close and unlink them, 0 to just close them.
  * @param sem_map Map of the opened semaphores.
  * @return 0 on success, -1 on error.

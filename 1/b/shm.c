@@ -6,13 +6,29 @@
 #include <stdio.h>
 #include <errno.h>
 
+/**
+ * Opens a semaphore.
+ * @param init
+ * @param count
+ * @param sem_p
+ * @param sem_name
+ * @return
+ */
 static int open_sem(int init, int count, sem_t **sem_p, char *sem_name) {
     *sem_p = init == 1 ? sem_open(sem_name, O_CREAT | O_EXCL, 0600, count) : sem_open(sem_name, 0);
     if (*sem_p == SEM_FAILED) return t_err("sem_open");
     return 0;
 }
 
+/**
+ * Closes a semaphore if it was opened.
+ * @param destroy
+ * @param sem
+ * @param sem_name
+ * @return
+ */
 static int close_sem(int destroy, sem_t *sem, char *sem_name) {
+    if (sem == NULL) return 0;
     if (sem_close(sem) < 0) return t_err("sem_close");
     if (destroy == 1) {
         if (sem_unlink(sem_name) < 0) return t_err("sem_unlink");
@@ -50,14 +66,27 @@ int close_shm(int destroy, int shm_fd) {
 
 int open_all_sem(int init, sem_map_t *sem_map) {
     if (open_sem(init, 1, &sem_map->cb, CB_SEM) == -1) return t_err("open_sem");
-    if (open_sem(init, CB_MAX_LEN, &sem_map->cb_free, CB_FREE_SEM) == -1) return t_err("open_sem");
-    if (open_sem(init, 0, &sem_map->cb_used, CB_USED_SEM) == -1) return t_err("open_sem");
+    if (open_sem(init, CB_MAX_LEN, &sem_map->cb_free, CB_FREE_SEM) == -1) {
+        close_all_sem(init, sem_map);
+        return t_err("open_sem");
+    }
+    if (open_sem(init, 0, &sem_map->cb_used, CB_USED_SEM) == -1) {
+        close_all_sem(init, sem_map);
+        return t_err("open_sem");
+    }
     return 0;
 }
 
 int close_all_sem(int destroy, sem_map_t *sem_map) {
-    if (close_sem(destroy, sem_map->cb, CB_SEM) == -1) return t_err("close_sem");
-    if (close_sem(destroy, sem_map->cb_free, CB_FREE_SEM) == -1) return t_err("close_sem");
+    if (close_sem(destroy, sem_map->cb, CB_SEM) == -1) {
+        close_sem(destroy, sem_map->cb_free, CB_FREE_SEM);
+        close_sem(destroy, sem_map->cb_used, CB_USED_SEM);
+        return t_err("close_sem");
+    }
+    if (close_sem(destroy, sem_map->cb_free, CB_FREE_SEM) == -1) {
+        close_sem(destroy, sem_map->cb_used, CB_USED_SEM);
+        return t_err("close_sem");
+    }
     if (close_sem(destroy, sem_map->cb_used, CB_USED_SEM) == -1) return t_err("close_sem");
     return 0;
 }
@@ -71,7 +100,10 @@ int push_cb(cbi_t cbi, shm_t *shm, sem_map_t *sem_map) {
     shm->cb[shm->wr_i] = cbi;
     ++shm->wr_i;
     shm->wr_i %= CB_MAX_LEN;
-    if (sem_post(sem_map->cb_used) == -1) return t_err("sem_post");
+    if (sem_post(sem_map->cb_used) == -1) {
+        sem_post(sem_map->cb);
+        return t_err("sem_post");
+    }
     if (sem_post(sem_map->cb) == -1) return t_err("sem_post");
     return 0;
 }
@@ -83,6 +115,8 @@ int read_cb(shm_t *shm, sem_map_t *sem_map, cbi_t *dist) {
     *dist = shm->cb[shm->rd_i];
     shm->rd_i++;
     shm->rd_i %= CB_MAX_LEN;
-    if (sem_post(sem_map->cb_free) == -1) return t_err("sem_post");
+    if (sem_post(sem_map->cb_free) == -1) {
+        return errno == EINTR ? 0 : t_err("sem_post");
+    }
     return 0;
 }

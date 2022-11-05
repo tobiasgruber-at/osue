@@ -89,7 +89,10 @@ static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
                 cbi.fas[i] = *fas[i];
             }
             // TODO: check why sometimes not stopping: e.g../generator 1-2 2-3 3-4 4-5 5-6 6-7 7-8 8-9 9-10
-            if (push_cb(cbi, shm, sem_map) == -1) e_err("push_cb");
+            if (push_cb(cbi, shm, sem_map) == -1) {
+                free(fas);
+                return t_err("push_cb");
+            }
         }
     }
     free(fas);
