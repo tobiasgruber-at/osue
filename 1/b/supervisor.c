@@ -88,6 +88,8 @@ int main(int argc, char **argv) {
         e_err("search_smallest_fas");
     };
     shm->active = 0;
+    // free once more, in case the circular buffer has no free space and one process is waiting
+    if (sem_post(sem_map.cb_free) == -1) e_err("sem_post");
     if (close_all_sem(1, &sem_map) == -1) {
         close_shm(1, shm_fd);
         e_err("close_all_sem");

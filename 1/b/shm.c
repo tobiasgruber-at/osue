@@ -93,6 +93,10 @@ int close_all_sem(int destroy, sem_map_t *sem_map) {
 
 int push_cb(cbi_t cbi, shm_t *shm, sem_map_t *sem_map) {
     if (sem_wait(sem_map->cb) == -1) t_err("sem_wait");
+    if (shm->active == 0) {
+        sem_post(sem_map->cb);
+        return 0;
+    }
     if (sem_wait(sem_map->cb_free) == -1) {
         sem_post(sem_map->cb);
         t_err("sem_wait");
