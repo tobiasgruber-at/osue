@@ -1,6 +1,6 @@
 /**
- * @brief Shared memory module.
- * @details Implementation of the shared memory module definitions.
+ * Shared memory module.
+ * @brief Implementation of the shared memory module definitions.
  * @file shm.c
  * @author Tobias Gruber, 11912367
  * @date 29.10.2022

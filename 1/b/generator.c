@@ -1,5 +1,6 @@
 /**
- * @brief Generator module. Main entry point for generators.
+ * Generator module.
+ * @brief Main entry point for generators.
  * @details Takes a graph as an input and continuously generates feedback arc sets for this graph that are
  * communicated to the supervisor.<br>
  * Must only be started while the supervisor is running.<br>

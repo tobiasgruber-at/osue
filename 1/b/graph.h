@@ -1,7 +1,7 @@
 /**
- * @brief Graph module definitions.
- * @details Covers all necessary types and operations on graphs in order to operate on its edges / vertices,
- * free it's resources or shuffle its edges.
+ * Graph module definitions.
+ * @brief Covers all necessary types and operations on graphs.
+ * @details Provides operations to add edges to a graph, free it's resources or shuffle its vertices.
  * @file graph.h
  * @author Tobias Gruber, 11912367
  * @date 23.10.2022

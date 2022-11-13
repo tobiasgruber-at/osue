@@ -1,8 +1,8 @@
 /**
- * @brief Shared memory module definitions.
- * @details Covers all necessary macros, types and operations regarding the shared memory and its semaphores in order
- * to initialise, open, close or unlink them.<br>
- * Additionally provides operations to push or read from the circular buffer.
+ * Shared memory module definitions
+ * @brief Covers all necessary macros, types and operations regarding the shared memory and its semaphores.
+ * @details Provides operations to initialise, open, close or unlink shared memory and semaphores as well as
+ * operations to push or read from the circular buffer.
  * @file shm.h
  * @author Tobias Gruber, 11912367
  * @date 29.10.2022

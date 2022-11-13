@@ -1,6 +1,7 @@
 /**
- * @brief Miscellaneous module definitions.
- * @details Includes miscellaneous operations from handling errors to parsing integers.
+ * Miscellaneous module definitions.
+ * @brief Covers miscellaneous operations.
+ * @details Includes operations from handling errors to parsing integers.
  * @file misc.h
  * @author Tobias Gruber, 11912367
  * @date 30.10.2022

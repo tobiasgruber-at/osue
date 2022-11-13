@@ -1,5 +1,6 @@
 /**
- * @brief Supervisor module. Main entry point for the supervisor.
+ * Supervisor module.
+ * @brief Main entry point for the supervisor.
  * @details Takes no arguments and continuously evaluates solutions from the generators to find the smallest
  * feedback arc set for a graph or determine it to be acyclic.<br>
  * Must be started before the generators.<br>

@@ -1,6 +1,6 @@
 /**
- * @brief Graph module.
- * @details Implementation of the graph module definitions.
+ * Graph module.
+ * @brief Implementation of the graph module definitions.
  * @file graph.c
  * @author Tobias Gruber, 11912367
  * @date 23.10.2022
