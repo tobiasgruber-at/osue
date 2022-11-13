@@ -119,13 +119,14 @@ static int evaluate_file(FILE *fp, struct Options *options) {
         char line_res[strlen(line) + strlen(noPalindromSuffix) + 1]; /**< Printed response for this line. */
         strcpy(line_res, line);
         strcat(line_res, is_palindrom(evaluated) ? palindromSuffix : noPalindromSuffix);
-        printf("%s", line_res);
         if (options->output_to_file) {
             if (fprintf(options->output_fp, "%s", line_res) < 0) {
                 fprintf(stderr, "[%s] ERROR: fprintf failed for file '%s': %s\n", prog_name, options->output_path, strerror(errno));
                 free(line);
                 return -1;
             }
+        } else {
+            printf("%s", line_res);
         }
     }
     free(line);
