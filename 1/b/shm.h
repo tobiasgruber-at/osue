@@ -22,8 +22,8 @@
 #define SEM_CB_MUTEX PREFIX "sem_cb_mutex" /**< Name of semaphore for mutual exclusion of the circular buffer. */
 #define SEM_CB_FREE PREFIX "sem_cb_read" /**< Name of semaphore indicating the free space of the circular buffer. */
 #define SEM_CB_USED PREFIX "sem_cb_used" /**< Name of semaphore indicating the used space of the circular buffer. */
-#define CB_MAX_LEN (50) /**< Max length of the circular buffer. */
-#define FAC_MAX_LEN (8) /**< Max length of a feedback arc set. */
+#define CB_MAX_LEN (50) /**< Maximum length of the circular buffer. */
+#define FAC_MAX_LEN (8) /**< Maximum length of a feedback arc set. */
 
 /** Map covering all semaphores. */
 typedef struct SemaphoreMap {

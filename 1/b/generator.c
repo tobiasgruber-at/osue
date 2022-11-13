@@ -26,7 +26,7 @@ char *prog_name;
  * Used global variables: prog_name
  */
 static void usage(void) {
-    fprintf(stderr, "Usage: %s edge...\nEXAMPLE: %s 0-1 1-2 1-3 1-4 2-4 3-6 4-3 4-5 6-0\n", prog_name, prog_name);
+    fprintf(stderr, "Usage: %s edge1...\nEXAMPLE: %s 0-1 1-3 2-3 3-4 4-2 5-1\n", prog_name, prog_name);
     exit(EXIT_FAILURE);
 }
 
