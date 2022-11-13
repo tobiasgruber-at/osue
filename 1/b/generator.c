@@ -89,7 +89,7 @@ static void generate_fas(graph_t *g, edge_t **fas, int *size) {
     *size = 0;
     for (int i = 0; i < g->edges_count; i++) {
         edge_t *e = g->edges[i];
-        if (is_after(g->vertices, g->edges_count, e) > 0) {
+        if (is_after(e, g->vertices, g->edges_count) > 0) {
             fas[(*size)++] = e;
         }
     }
