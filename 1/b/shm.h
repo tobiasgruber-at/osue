@@ -7,10 +7,11 @@
 #include <signal.h>
 #include <semaphore.h>
 
-#define SHM_NAME "/fac_shm"
-#define CB_SEM "fac_cb"
-#define CB_FREE_SEM "fac_cb_read"
-#define CB_USED_SEM "fac_cb_used"
+#define PREFIX "/11912367_fac_"
+#define SHM PREFIX "shm"
+#define SEM_CB_MUTEX PREFIX "sem_cb_mutex"
+#define SEM_CB_FREE PREFIX "sem_cb_read"
+#define SEM_CB_USED PREFIX "sem_cb_used"
 #define CB_MAX_LEN (50)
 #define FAC_MAX_LEN (8)
 

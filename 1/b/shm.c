@@ -37,7 +37,7 @@ static int close_sem(int destroy, sem_t *sem, char *sem_name) {
 }
 
 int open_shm(int init, int *shm_fd, shm_t **shm_p) {
-    *shm_fd = init == 1 ? shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, 0600) : shm_open(SHM_NAME, O_RDWR, 0);
+    *shm_fd = init == 1 ? shm_open(SHM, O_RDWR | O_CREAT | O_EXCL, 0600) : shm_open(SHM, O_RDWR, 0);
     if (*shm_fd < 0) return t_err("shm_open");
     if (init == 1) {
         if (ftruncate(*shm_fd, sizeof(shm_t)) < 0) return t_err("ftruncate");
@@ -59,18 +59,18 @@ int close_shm(int destroy, int shm_fd) {
     if (close(shm_fd) < 0) return t_err("close");
     if (munmap(NULL, sizeof(shm_t)) < 0) return t_err("munmap");
     if (destroy == 1) {
-        if (shm_unlink(SHM_NAME) < 0) return t_err("shm_unlink");
+        if (shm_unlink(SHM) < 0) return t_err("shm_unlink");
     }
     return 0;
 }
 
 int open_all_sem(int init, sem_map_t *sem_map) {
-    if (open_sem(init, 1, &sem_map->cb, CB_SEM) == -1) return t_err("open_sem");
-    if (open_sem(init, CB_MAX_LEN, &sem_map->cb_free, CB_FREE_SEM) == -1) {
+    if (open_sem(init, 1, &sem_map->cb, SEM_CB_MUTEX) == -1) return t_err("open_sem");
+    if (open_sem(init, CB_MAX_LEN, &sem_map->cb_free, SEM_CB_FREE) == -1) {
         close_all_sem(init, sem_map);
         return t_err("open_sem");
     }
-    if (open_sem(init, 0, &sem_map->cb_used, CB_USED_SEM) == -1) {
+    if (open_sem(init, 0, &sem_map->cb_used, SEM_CB_USED) == -1) {
         close_all_sem(init, sem_map);
         return t_err("open_sem");
     }
@@ -78,16 +78,16 @@ int open_all_sem(int init, sem_map_t *sem_map) {
 }
 
 int close_all_sem(int destroy, sem_map_t *sem_map) {
-    if (close_sem(destroy, sem_map->cb, CB_SEM) == -1) {
-        close_sem(destroy, sem_map->cb_free, CB_FREE_SEM);
-        close_sem(destroy, sem_map->cb_used, CB_USED_SEM);
+    if (close_sem(destroy, sem_map->cb, SEM_CB_MUTEX) == -1) {
+        close_sem(destroy, sem_map->cb_free, SEM_CB_FREE);
+        close_sem(destroy, sem_map->cb_used, SEM_CB_USED);
         return t_err("close_sem");
     }
-    if (close_sem(destroy, sem_map->cb_free, CB_FREE_SEM) == -1) {
-        close_sem(destroy, sem_map->cb_used, CB_USED_SEM);
+    if (close_sem(destroy, sem_map->cb_free, SEM_CB_FREE) == -1) {
+        close_sem(destroy, sem_map->cb_used, SEM_CB_USED);
         return t_err("close_sem");
     }
-    if (close_sem(destroy, sem_map->cb_used, CB_USED_SEM) == -1) return t_err("close_sem");
+    if (close_sem(destroy, sem_map->cb_used, SEM_CB_USED) == -1) return t_err("close_sem");
     return 0;
 }
 
