@@ -1,3 +1,14 @@
+/**
+ * @brief Generator module. Main entry point for generators.
+ * @details Takes a graph as an input and continuously generates feedback arc sets for this graph that are
+ * communicated to the supervisor.<br>
+ * Must only be started while the supervisor is running.<br>
+ * Terminates when the supervisor notifies to stop.
+ * @file generator.c
+ * @author Tobias Gruber, 11912367
+ * @date 23.10.2022
+ **/
+
 #include "shm.h"
 #include <stdio.h>
 #include <getopt.h>
@@ -9,9 +20,8 @@
 char *prog_name;
 
 /**
- * @brief Prints the usage of the program to stderr and exists with an error.
- * @details Exits the program with EXIT_FAILURE.<br>
- * Error handling of fprintf is not covered as the program has to exit anyway.<br>
+ * @brief Prints the usage of the program and exits.
+ * @details Prints to stderr and exits with EXIT_FAILURE.<br>
  * Used global variables: prog_name
  */
 static void usage(void) {
@@ -20,11 +30,11 @@ static void usage(void) {
 }
 
 /**
- * @brief Initialised the graph.
- * @details Constructs the graph by interpreting the programs' arguments.
- * @param g Pointer to the graph that will be updated.
- * @param argc Programs' argument counter.
- * @param argv Programs' argument vector.
+ * @brief Initialises the graph.
+ * @details Constructs the graph by parsing the program's arguments.
+ * @param g Pointer to the graph that will be created.
+ * @param argc Program's argument counter.
+ * @param argv Program's argument vector.
  * @return 0 on success, -1 on error.
  */
 static int init_graph(graph_t *g, int argc, char **argv) {
@@ -65,14 +75,16 @@ static int init_graph(graph_t *g, int argc, char **argv) {
 }
 
 /**
- * @brief Gets a feedback arc set of a graph.
- * @details The feedback arc set must reserve as much memory as the graphs' edges.<br>
- * TODO: describe algorithm
- * @param g Pointer to source graph
- * @param fas Pointer to the feedback arc set.
- * @param size Pointer that will be updated with the size of the feedback arc set.
+ * @brief Generates a feedback arc set of a graph.
+ * @details The randomized algorithm always finds a feedback arc set by:<ol>
+ * <li>Receiving a random permutation of the graph's edges by shuffling them.</li>
+ * <li>Adding all edges (u, v) for which u > v to the feedback arc set.</li></ol>
+ * @param g Pointer to source graph.
+ * @param fas Pointer to pointer to the generated feedback arc set. Pointed pointer must reserve enough memory.
+ * @param size Pointer to the size of the generated feedback arc set.
  */
 static void generate_fas(graph_t *g, edge_t **fas, int *size) {
+    shuffle(g->vertices, g->vertices_count);
     *size = 0;
     for (int i = 0; i < g->edges_count; i++) {
         edge_t *e = g->edges[i];
@@ -83,18 +95,20 @@ static void generate_fas(graph_t *g, edge_t **fas, int *size) {
 }
 
 /**
- * @brief Searches for the smallest feedback arc set.
- * @details Continuously looks for feedback arc sets and pushes them to the circular buffer in the shared memory.
+ * @brief Creates feedback arc sets and writes them to the shared memory.
+ * @details Continuously creates feedback arc sets of a graph and pushes them to the circular buffer in the
+ * shared memory.<br>
+ * Runs until the supervisor notifies to stop.
  * @param g Pointer to the graph.
  * @param shm Pointer to the shared memory.
  * @param sem_map Pointer to the semaphore map.
  * @return 0 on success, -1 on error.
  */
-static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
+static int generate_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
+    srand(getpid());
     edge_t **fas = (edge_t**) malloc(sizeof(edge_t*) * g->edges_count);
     if (fas == NULL) return t_err("malloc");
     while (shm->active == 1) {
-        shuffle(g->vertices, g->vertices_count);
         int fas_size = 0;
         generate_fas(g, fas, &fas_size);
         if (fas_size <= FAC_MAX_LEN) {
@@ -113,6 +127,16 @@ static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
     return 0;
 }
 
+/**
+ * @brief Main function for the generator program.
+ * @details Parses the given graph from the arguments and continuously generates feedback arc sets that are
+ * stored in the circular buffer of the shared memory.<br>
+ * Necessary shared memory and semaphores are opened and closed afterwards to accomplish this communication.<br>
+ * If an error occurs it exits with EXIT_FAILURE.
+ * @param argc Argument counter.
+ * @param argv Argument vector.
+ * @return EXIT_SUCCESS on successful termination.
+ */
 int main(int argc, char **argv) {
     prog_name = argv[0];
     if (optind >= argc) usage();
@@ -130,12 +154,11 @@ int main(int argc, char **argv) {
         close_shm(0, shm_fd);
         e_err("init_graph");
     }
-    srand(getpid());
-    if (search_smallest_fas(&g, shm, &sem_map) == -1) {
+    if (generate_smallest_fas(&g, shm, &sem_map) == -1) {
         free_graph(&g);
         close_all_sem(0, &sem_map);
         close_shm(0, shm_fd);
-        e_err("search_smallest_fas");
+        e_err("generate_smallest_fas");
     }
     free_graph(&g);
     if (close_all_sem(0, &sem_map) < 0) {

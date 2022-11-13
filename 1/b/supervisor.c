@@ -1,3 +1,14 @@
+/**
+ * @brief Supervisor module. Main entry point for the supervisor.
+ * @details Takes no arguments and continuously evaluates solutions from the generators to find the smallest
+ * feedback arc set for a graph or determine it to be acyclic.<br>
+ * Must be started before the generators.<br>
+ * Terminates the supervisor and all generators if the user interrupts or the graph is found to be acyclic.
+ * @file supervisor.c
+ * @author Tobias Gruber, 11912367
+ * @date 23.10.2022
+ **/
+
 #include "shm.h"
 #include <stdio.h>
 #include <getopt.h>
@@ -8,12 +19,11 @@
 
 char *prog_name;
 
-volatile sig_atomic_t quit = 0;
+volatile sig_atomic_t quit = 0; /**< Whether the supervisor and all generators should stop. */
 
 /**
- * @brief Prints the usage of the program and exists.
- * @details Usage is printed to stderr. Exits the program with EXIT_FAILURE.<br>
- * Error handling of fprintf is not covered as the program has to exit anyway.<br>
+ * @brief Prints the usage of the program and exits.
+ * @details Prints to stderr and exits with EXIT_FAILURE.<br>
  * Used global variables: prog_name
  */
 static void usage(void) {
@@ -23,7 +33,8 @@ static void usage(void) {
 
 /**
  * @brief Handles an interrupt.
- * @details Instructs the program to quit by setting the global variable quit to 1.<br>
+ * @details In case of interruption or termination signals, it instructs the program to quit setting the global
+ * quit variable to 1.<br>
  * Used global variables: quit
  * @param signal
  */
@@ -32,7 +43,8 @@ static void handle_interrupt(int signal) {
 }
 
 /**
- * @brief Registers necessary sighandlers.
+ * @brief Registers necessary signal handlers.
+ * @details Registers actions for interruption and termination signals.
  */
 static void register_sighandler(void) {
     struct sigaction sa;
@@ -44,7 +56,11 @@ static void register_sighandler(void) {
 
 /**
  * @brief Searches the smallest feedback arc set.
- * @details Reads from the circular buffer in the shared memory.
+ * @details Continuously reads generated feedback arc sets from the circular buffer in the shared memory and keeps
+ * track of the smallest found solution, which is printed to stdout.<br>
+ * The progress is printed to stdout.<br>
+ * Terminates if the global quit variable is equal to 1, or if the graph is found to be acyclic.<br>
+ * Used global variables: quit
  * @param shm Pointer to the shared memory.
  * @param sem_map Pointer to the semaphore map.
  * @return 0 on success, -1 on error.
@@ -52,7 +68,7 @@ static void register_sighandler(void) {
 static int search_smallest_fas(shm_t *shm, sem_map_t *sem_map) {
     int smallest_fac_size = FAC_MAX_LEN + 1;
     while (!quit) {
-        cbi_t cbi; // malloc?
+        cbi_t cbi;
         cbi.size = FAC_MAX_LEN + 1;
         if (read_cb(shm, sem_map, &cbi) == -1) return t_err("read_cb");
         if (cbi.size == 0) {
@@ -70,6 +86,18 @@ static int search_smallest_fas(shm_t *shm, sem_map_t *sem_map) {
     return 0;
 }
 
+/**
+ * @brief Main function for the supervisor program.
+ * @details Continuously searches for the smallest feedback arc set by evaluation the generated feedback arc sets
+ * that are from stored in the circular buffer of the shared memory by the generators.<br>
+ * Necessary shared memory and semaphores are initialised as well as opened, and closed afterwards to accomplish
+ * this communication.<br>
+ * Registers signal handlers to also close all generators properly when the supervisor is interrupted.<br>
+ * If an error occurs it exits with EXIT_FAILURE.
+ * @param argc Argument counter.
+ * @param argv Argument vector.
+ * @return EXIT_SUCCESS on successful termination.
+ */
 int main(int argc, char **argv) {
     prog_name = argv[0];
     if (optind < argc) usage();
@@ -85,7 +113,7 @@ int main(int argc, char **argv) {
     if (search_smallest_fas(shm, &sem_map) == -1) {
         close_all_sem(1, &sem_map);
         close_shm(1, shm_fd);
-        e_err("search_smallest_fas");
+        e_err("generate_smallest_fas");
     };
     shm->active = 0;
     // free once more, in case the circular buffer has no free space and one process is waiting

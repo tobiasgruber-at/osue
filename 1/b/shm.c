@@ -1,3 +1,11 @@
+/**
+ * @brief Shared memory module.
+ * @details Implementation of the shared memory module definitions.
+ * @file shm.c
+ * @author Tobias Gruber, 11912367
+ * @date 29.10.2022
+ **/
+
 #include "shm.h"
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -7,12 +15,13 @@
 #include <errno.h>
 
 /**
- * Opens a semaphore.
- * @param init
- * @param count
- * @param sem_p
- * @param sem_name
- * @return
+ * @brief Opens a semaphore.
+ * @details Opens or optionally also creates a semaphore.
+ * @param init 1 to initialise, 0 otherwise.
+ * @param count Initial semaphore count.
+ * @param sem_p Pointer to semaphore pointers.
+ * @param sem_name String of the semaphore's name.
+ * @return 0 on success, -1 on error.
  */
 static int open_sem(int init, int count, sem_t **sem_p, char *sem_name) {
     *sem_p = init == 1 ? sem_open(sem_name, O_CREAT | O_EXCL, 0600, count) : sem_open(sem_name, 0);
@@ -21,16 +30,17 @@ static int open_sem(int init, int count, sem_t **sem_p, char *sem_name) {
 }
 
 /**
- * Closes a semaphore if it was opened.
- * @param destroy
- * @param sem
- * @param sem_name
- * @return
+ * @brief Closes a semaphore.
+ * @details Closes and optionally unlinks a semaphore, but only if it was opened.
+ * @param unlink 1 to also unlink, 0 otherwise.
+ * @param sem Pointer to semaphore that should close.
+ * @param sem_name Name of the semaphore.
+ * @return 0 on success, -1 on error.
  */
-static int close_sem(int destroy, sem_t *sem, char *sem_name) {
+static int close_sem(int unlink, sem_t *sem, char *sem_name) {
     if (sem == NULL) return 0;
     if (sem_close(sem) < 0) return t_err("sem_close");
-    if (destroy == 1) {
+    if (unlink == 1) {
         if (sem_unlink(sem_name) < 0) return t_err("sem_unlink");
     }
     return 0;
@@ -61,10 +71,10 @@ int open_shm(int init, int *shm_fd, shm_t **shm_p) {
     return 0;
 }
 
-int close_shm(int destroy, int shm_fd) {
+int close_shm(int unlink, int shm_fd) {
     if (close(shm_fd) < 0) return t_err("close");
     if (munmap(NULL, sizeof(shm_t)) < 0) return t_err("munmap");
-    if (destroy == 1) {
+    if (unlink == 1) {
         if (shm_unlink(SHM) < 0) return t_err("shm_unlink");
     }
     return 0;
@@ -83,17 +93,17 @@ int open_all_sem(int init, sem_map_t *sem_map) {
     return 0;
 }
 
-int close_all_sem(int destroy, sem_map_t *sem_map) {
-    if (close_sem(destroy, sem_map->cb_mutex, SEM_CB_MUTEX) == -1) {
-        close_sem(destroy, sem_map->cb_free, SEM_CB_FREE);
-        close_sem(destroy, sem_map->cb_used, SEM_CB_USED);
+int close_all_sem(int unlink, sem_map_t *sem_map) {
+    if (close_sem(unlink, sem_map->cb_mutex, SEM_CB_MUTEX) == -1) {
+        close_sem(unlink, sem_map->cb_free, SEM_CB_FREE);
+        close_sem(unlink, sem_map->cb_used, SEM_CB_USED);
         return t_err("close_sem");
     }
-    if (close_sem(destroy, sem_map->cb_free, SEM_CB_FREE) == -1) {
-        close_sem(destroy, sem_map->cb_used, SEM_CB_USED);
+    if (close_sem(unlink, sem_map->cb_free, SEM_CB_FREE) == -1) {
+        close_sem(unlink, sem_map->cb_used, SEM_CB_USED);
         return t_err("close_sem");
     }
-    if (close_sem(destroy, sem_map->cb_used, SEM_CB_USED) == -1) return t_err("close_sem");
+    if (close_sem(unlink, sem_map->cb_used, SEM_CB_USED) == -1) return t_err("close_sem");
     return 0;
 }
 

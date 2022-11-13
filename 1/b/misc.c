@@ -1,3 +1,11 @@
+/**
+ * @brief Miscellaneous module.
+ * @details Implementation of the miscellaneous module definitions.
+ * @file misc.c
+ * @author Tobias Gruber, 11912367
+ * @date 30.10.2022
+ **/
+
 #include "misc.h"
 #include <stdio.h>
 #include <stdlib.h>

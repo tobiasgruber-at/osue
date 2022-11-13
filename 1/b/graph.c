@@ -1,7 +1,21 @@
+/**
+ * @brief Graph module.
+ * @details Implementation of the graph module definitions.
+ * @file graph.c
+ * @author Tobias Gruber, 11912367
+ * @date 23.10.2022
+ **/
+
 #include "graph.h"
 #include <stdlib.h>
 #include <stdio.h>
 
+/**
+ * @brief Adds a vertex to a graph.
+ * @details Only adds the vertex if it wasn't already added.
+ * @param g Pointer to the graph.
+ * @param idx Vertex to be added.
+ */
 static void add_vertex(graph_t *g, int idx) {
     for (int i = 0; i < g->vertices_count; i++) {
         if (g->vertices[i] == idx) return;
@@ -41,7 +55,7 @@ void shuffle(int list[], int size) {
     }
 }
 
-int is_after(int *order, int count, edge_t *e) {
+int is_after(edge_t *e, int *order, int count) {
     for (int i = 0; i < count; i++) {
         if (order[i] == e->start) return 0;
         if (order[i] == e->end) return 1;
