@@ -1,9 +1,10 @@
 /**
+ * String functions module definitions.
+ * @brief Provides common utility functions for manipulating strings.
+ * @details Includes string operations to trim strings, remove newlines and also transform it to lowercase.
  * @file strfun.h
- * @author Tobias Gruber
+ * @author Tobias Gruber, 11912367
  * @date 12.10.2022
- * @brief String functions module.
- * @details Provides common utility functions for manipulating strings.
  */
 
 /**

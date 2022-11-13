@@ -1,8 +1,9 @@
 /**
+ * String functions module.
+ * @brief Implementation of the string functions module defintions.
  * @file strfun.c
- * @author Tobias Gruber
+ * @author Tobias Gruber, 11912367
  * @date 12.10.2022
- * @brief Implementation of the string functions module.
  */
 
 #include "strfun.h"

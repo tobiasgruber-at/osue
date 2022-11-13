@@ -1,10 +1,11 @@
 /**
- * @file ispalindrom.c
- * @author Tobias Gruber
- * @date 12.10.2022
- * @brief The main module. Entry point of the program.
+ * The main module.
+ * @brief Entry point of the program.
  * @details The program reads from stdin or other files and evaluates for each line, if it was a palindrom.<br>
  * The response will be printed to stdout and can additionally be written to a specified output file.
+ * @file ispalindrom.c
+ * @author Tobias Gruber, 11912367
+ * @date 12.10.2022
  */
 
 #include "strfun.h"
@@ -28,7 +29,7 @@ struct Options {
     FILE *output_fp; /**< Output file stream. */
 };
 
-static char *prog_name; /**< The program name. */
+static char *prog_name; /**< The program's name. */
 
 /**
  * @brief Prints the usage of the program to stderr and exists with an error.
@@ -50,14 +51,14 @@ static void usage(void) {
  */
 static void evaluate_options(int argc, char *argv[], struct Options *options) {
     int option; /**< Currently evaluated option. */
-    while((option = getopt(argc, argv, "sio:")) > 0) {
+    while((option = getopt(argc, argv, "iso:")) > 0) {
         switch(option) {
-            case 's': {
-                ++options->ignore_whitespaces;
-                break;
-            }
             case 'i': {
                 ++options->ignore_casing;
+                break;
+            }
+            case 's': {
+                ++options->ignore_whitespaces;
                 break;
             }
             case 'o': {
@@ -133,7 +134,10 @@ static int evaluate_file(FILE *fp, struct Options *options) {
 
 /**
  * @brief Entry point of the program.
- * @details Structures the procedure of the programm based on given options and arguments.<br>
+ * @details Structures the procedure of the program based on given options and arguments.<br>
+ * It reads from stdin or other files and evaluates for each line, if it was a palindrom.<br>
+ * Based on the options, it respects casing and whitespaces for the input or not.<br>
+ * The response will be printed to stdout and is optionally written to a specified output file.<br>
  * Exits the program with EXIT_FAILURE in case of errors.<br>
  * Used global variables: prog_name
  *
@@ -158,6 +162,7 @@ int main(int argc, char *argv[]) {
             char *file_path = argv[optind]; /**< Path to the input file. */
             FILE *input_fp = fopen(file_path, "r");
             if (input_fp == NULL) {
+                fprintf(stderr, "[%s] ERROR: fopen failed for file '%s': %s\n", prog_name, file_path, strerror(errno));
                 if (options.output_to_file) fclose(options.output_fp);
                 exit(EXIT_FAILURE);
             }
