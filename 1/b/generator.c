@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <string.h>
 
 char *prog_name;
 
@@ -34,10 +35,16 @@ static int init_graph(graph_t *g, int argc, char **argv) {
     g->vertices = (int*) malloc(sizeof(int) * vertices_upper);
     if (g->edges == NULL) return t_err("malloc");
     for(; optind < argc; optind++){
-        char *edge = argv[optind];
+        char *input = argv[optind];
         edge_t e = {0, 0};
-        // TODO: format handling - use strtol
-        if (sscanf(edge, "%i-%i", &e.start, &e.end) < 0) usage();
+        if (parse_int(&e.start, strtok(input, "-")) == -1) {
+            t_err("parse_int");
+            usage();
+        }
+        if (parse_int(&e.end, strtok(NULL, "")) == -1) {
+            t_err("parse_int");
+            usage();
+        }
         add_edge(g, &e);
     }
     if (g->edges_count < edges_upper) {
@@ -88,7 +95,6 @@ static int search_smallest_fas(graph_t *g, shm_t *shm, sem_map_t *sem_map) {
             for (int i = 0; i < fas_size; i++) {
                 cbi.fas[i] = *fas[i];
             }
-            // TODO: check why sometimes not stopping: e.g../generator 1-2 2-3 3-4 4-5 5-6 6-7 7-8 8-9 9-10
             if (push_cb(cbi, shm, sem_map) == -1) {
                 free(fas);
                 return t_err("push_cb");
