@@ -40,10 +40,16 @@ int open_shm(int init, int *shm_fd, shm_t **shm_p) {
     *shm_fd = init == 1 ? shm_open(SHM, O_RDWR | O_CREAT | O_EXCL, 0600) : shm_open(SHM, O_RDWR, 0);
     if (*shm_fd < 0) return t_err("shm_open");
     if (init == 1) {
-        if (ftruncate(*shm_fd, sizeof(shm_t)) < 0) return t_err("ftruncate");
+        if (ftruncate(*shm_fd, sizeof(shm_t)) < 0) {
+            close(*shm_fd);
+            return t_err("ftruncate");
+        }
     }
     *shm_p = mmap(NULL, sizeof(shm_t), PROT_READ | PROT_WRITE, MAP_SHARED, *shm_fd, 0);
-    if (*shm_p == MAP_FAILED) return t_err("mmap");
+    if (*shm_p == MAP_FAILED) {
+        close(*shm_fd);
+        return t_err("mmap");
+    }
     if (init == 1) {
         (*shm_p)->active = 1;
         (*shm_p)->rd_i = 0;
@@ -65,7 +71,7 @@ int close_shm(int destroy, int shm_fd) {
 }
 
 int open_all_sem(int init, sem_map_t *sem_map) {
-    if (open_sem(init, 1, &sem_map->cb, SEM_CB_MUTEX) == -1) return t_err("open_sem");
+    if (open_sem(init, 1, &sem_map->cb_mutex, SEM_CB_MUTEX) == -1) return t_err("open_sem");
     if (open_sem(init, CB_MAX_LEN, &sem_map->cb_free, SEM_CB_FREE) == -1) {
         close_all_sem(init, sem_map);
         return t_err("open_sem");
@@ -78,7 +84,7 @@ int open_all_sem(int init, sem_map_t *sem_map) {
 }
 
 int close_all_sem(int destroy, sem_map_t *sem_map) {
-    if (close_sem(destroy, sem_map->cb, SEM_CB_MUTEX) == -1) {
+    if (close_sem(destroy, sem_map->cb_mutex, SEM_CB_MUTEX) == -1) {
         close_sem(destroy, sem_map->cb_free, SEM_CB_FREE);
         close_sem(destroy, sem_map->cb_used, SEM_CB_USED);
         return t_err("close_sem");
@@ -92,23 +98,23 @@ int close_all_sem(int destroy, sem_map_t *sem_map) {
 }
 
 int push_cb(cbi_t cbi, shm_t *shm, sem_map_t *sem_map) {
-    if (sem_wait(sem_map->cb) == -1) t_err("sem_wait");
+    if (sem_wait(sem_map->cb_mutex) == -1) t_err("sem_wait");
     if (shm->active == 0) {
-        sem_post(sem_map->cb);
+        sem_post(sem_map->cb_mutex);
         return 0;
     }
     if (sem_wait(sem_map->cb_free) == -1) {
-        sem_post(sem_map->cb);
+        sem_post(sem_map->cb_mutex);
         t_err("sem_wait");
     }
     shm->cb[shm->wr_i] = cbi;
     ++shm->wr_i;
     shm->wr_i %= CB_MAX_LEN;
     if (sem_post(sem_map->cb_used) == -1) {
-        sem_post(sem_map->cb);
+        sem_post(sem_map->cb_mutex);
         return t_err("sem_post");
     }
-    if (sem_post(sem_map->cb) == -1) return t_err("sem_post");
+    if (sem_post(sem_map->cb_mutex) == -1) return t_err("sem_post");
     return 0;
 }
 

@@ -17,7 +17,7 @@
 
 /** @brief Map for all semaphores. */
 typedef struct SemaphoreMap {
-    sem_t *cb; /**< Semaphore for the circular buffer access. */
+    sem_t *cb_mutex; /**< Semaphore for the circular buffer access. */
     sem_t *cb_free; /**< Semaphore for the free space of the circular buffer. */
     sem_t *cb_used; /**< Semaphore for the used space of the circular buffer. */
 } sem_map_t;

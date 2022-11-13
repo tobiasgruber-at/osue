@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/**
- * @brief Adds a vertex to a graph.
- * @details Only adds if it does not already exist.
- */
 static void add_vertex(graph_t *g, int idx) {
     for (int i = 0; i < g->vertices_count; i++) {
         if (g->vertices[i] == idx) return;
@@ -32,8 +28,8 @@ void free_graph(graph_t *g) {
     for (int i = 0; i < g->edges_count; i++) {
         free(g->edges[i]);
     }
-    free(g->edges);
-    free(g->vertices);
+    if (g->edges != NULL) free(g->edges);
+    if (g->vertices != NULL) free(g->vertices);
 }
 
 void shuffle(int list[], int size) {

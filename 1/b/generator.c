@@ -33,19 +33,27 @@ static int init_graph(graph_t *g, int argc, char **argv) {
     g->edges = (edge_t**) malloc(sizeof(edge_t*) * edges_upper);
     if (g->edges == NULL) return t_err("malloc");
     g->vertices = (int*) malloc(sizeof(int) * vertices_upper);
-    if (g->edges == NULL) return t_err("malloc");
+    if (g->vertices == NULL) {
+        free_graph(g);
+        return t_err("malloc");
+    }
     for(; optind < argc; optind++){
         char *input = argv[optind];
         edge_t e = {0, 0};
         if (parse_int(&e.start, strtok(input, "-")) == -1) {
+            free_graph(g);
             t_err("parse_int");
             usage();
         }
         if (parse_int(&e.end, strtok(NULL, "")) == -1) {
+            free_graph(g);
             t_err("parse_int");
             usage();
         }
-        add_edge(g, &e);
+        if (add_edge(g, &e) == -1) {
+            free_graph(g);
+            e_err("add_edge");
+        }
     }
     if (g->edges_count < edges_upper) {
         g->edges = (edge_t**) realloc(g->edges, sizeof(edge_t*) * g->edges_count);
@@ -116,15 +124,17 @@ int main(int argc, char **argv) {
         close_shm(0, shm_fd);
         e_err("open_all_sem");
     }
-    struct Graph g = {NULL, NULL};
+    struct Graph g = {NULL, NULL, 0, 0};
     if (init_graph(&g, argc, argv) == -1) {
         close_all_sem(0, &sem_map);
+        close_shm(0, shm_fd);
         e_err("init_graph");
     }
     srand(getpid());
     if (search_smallest_fas(&g, shm, &sem_map) == -1) {
-        close_all_sem(0, &sem_map);
         free_graph(&g);
+        close_all_sem(0, &sem_map);
+        close_shm(0, shm_fd);
         e_err("search_smallest_fas");
     }
     free_graph(&g);
