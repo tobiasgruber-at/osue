@@ -10,6 +10,10 @@ void usage() {
     exit(EXIT_FAILURE);
 }
 
+void free_rands(char *rands[2]) {
+    for (int i = 0; i < 2; i++) free(rands[i]);
+}
+
 void fill_zeroes(char **str, int min_len) {
     char old_str[strlen(*str) + 1];
     int new_len = 1;
@@ -17,8 +21,9 @@ void fill_zeroes(char **str, int min_len) {
     while (new_len < min_len) new_len *= 2;
     int diff = new_len - strlen(old_str);
     if (diff == 0) return;
-    *str = (char *) malloc(sizeof(char) * new_len);
-    for (int i = 0; i < diff; i++) (*str)[i] = '0';
+    free(*str);
+    *str = (char *) calloc(new_len + 1, sizeof(char));
+    memset(*str, '0', diff);
     strcat(*str, old_str);
 }
 
@@ -47,6 +52,7 @@ int handle_options(char *rands[]) {
         if (line_c >= 2) return m_err("More than two hexadecimal numbers provided");
         remove_newline(line);
         if (is_hex(line) == -1) {
+            free(line);
             m_err("Input must be a hexadecimal number");
             return t_err("is_hex");
         }
@@ -54,25 +60,21 @@ int handle_options(char *rands[]) {
         strcpy(rands[line_c], line);
         ++line_c;
     }
-    if (line_c < 2) return m_err("Less than two hexadecimal numbers provided");
     free(line);
+    if (line_c < 2) {
+        free_rands(rands);
+        return m_err("Less than two hexadecimal numbers provided");
+    }
     int max_length = max(strlen(rands[0]), strlen(rands[1]));
-    for (int i = 0; i < 2; i++) fill_zeroes(&rands[i], max_length);
+    for (int i = 0; i < 2; i++) fill_zeroes(&(rands[i]), max_length);
     return 0;
-}
-
-void free_rands(char *rands[2]) {
-    for (int i = 0; i < 2; i++) free(rands[i]);
 }
 
 int main(int argc, char **argv) {
     prog_name = argv[0];
     if (argc > 1) usage();
     char *rands[2];
-    if (handle_options(rands) == -1) {
-        free_rands(rands);
-        e_err("handle_options");
-    }
+    if (handle_options(rands) == -1) e_err("handle_options");
     printf("%s\n", rands[0]);
     printf("%s\n", rands[1]);
     free_rands(rands);
