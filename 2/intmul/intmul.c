@@ -8,6 +8,7 @@
 
 // count of operands
 #define R_N 2 /**< Number of operands (for the multiplication) */
+#define F_N 4 /**< Number of forked processes (for the multiplication) */
 
 char *prog_name;
 
@@ -108,14 +109,15 @@ int fork_child(char **res, char *x, char *y) {
     return 0;
 }
 
-int multiply_rands(char *a, char *b) {
+/** Multiplies two hex numbers. */
+int fork_multiply(char *a, char *b) {
     int half_length = strlen(a) / 2;
     char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
     half_str(a_h, a, 0, half_length);
     half_str(a_l, a, 1, half_length);
     half_str(b_h, b, 0, half_length);
     half_str(b_l, b, 1, half_length);
-    char *res[4];
+    char *res[F_N] = { NULL, NULL, NULL, NULL };
     if (fork_child(&(res[0]), a_h, b_h) == -1) return t_err("fork_child");
     if (fork_child(&(res[1]), a_h, b_l) == -1) return t_err("fork_child");
     if (fork_child(&(res[2]), a_l, b_h) == -1) return t_err("fork_child");
@@ -124,6 +126,9 @@ int multiply_rands(char *a, char *b) {
     printf("%s\n", res[1]);
     printf("%s\n", res[2]);
     printf("%s\n", res[3]);
+    for (int i = 0; i < F_N; i++) {
+        if (res[i] != NULL) free(res[i]);
+    }
     return 0;
 }
 
@@ -141,9 +146,9 @@ int main(int argc, char **argv) {
         printf("%lX\n", res);
         fflush(stdout);
     } else {
-        if (multiply_rands(a, b) < 0) {
+        if (fork_multiply(a, b) < 0) {
             free_rands(a, b);
-            e_err("multiply_rands");
+            e_err("fork_multiply");
         };
     }
     free_rands(a, b);
