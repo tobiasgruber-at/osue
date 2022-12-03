@@ -115,7 +115,7 @@ int fork_child(int *res, char *x, char *y) {
  * @param length Length of the hex product.
  */
 int evaluate_prod(int prod_dec, int length) {
-    char *prod_hex = (char *) malloc(sizeof(char) * length);
+    char *prod_hex = (char *) malloc(sizeof(char) * (length + 1));
     if (prod_hex == NULL) return t_err("malloc");
     sprintf(prod_hex, "%X", prod_dec);
     fill_zeroes(&prod_hex, length);
