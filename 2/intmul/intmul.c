@@ -17,10 +17,9 @@ void usage() {
 }
 
 /** Frees allocated memory for the operands. */
-void free_rands(char *rands[R_N]) {
-    for (int i = 0; i < R_N; i++) {
-        if (rands[i] != NULL) free(rands[i]);
-    }
+void free_rands(char *a, char *b) {
+    if (a != NULL) free(a);
+    if (b != NULL) free(b);
 }
 
 /**
@@ -47,11 +46,12 @@ int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-int receive_rands(char *rands[R_N]) {
+/** Gets operands and mallocs memory.. */
+int receive_rands(char **a, char **b) {
     char *line = NULL; /**< String of the current line. */
-    size_t len = 0; /**< Length of the current line. */
-    int line_c = 0;
+    size_t len = 0, line_c = 0;
     while ((getline(&line, &len, stdin)) > 0) {
+        char **X = (line_c == 0) ? a : b;
         remove_newline(line);
         if (is_hex(line) == -1) {
             free(line);
@@ -59,20 +59,19 @@ int receive_rands(char *rands[R_N]) {
             return t_err("is_hex");
         }
         // TODO: find out why mem-leak if second input for example "2g"
-        rands[line_c] = (char *) calloc(strlen(line) + 1, sizeof(char));
-        if (rands[line_c] == NULL) {
+        *X = (char *) malloc(sizeof(char) * (strlen(line) + 1));
+        if (*X == NULL) {
             free(line);
             return t_err("malloc");
         }
-        strcpy(rands[line_c], line);
+        strcpy(*X, line);
         if (++line_c >= R_N) break;
     }
     free(line);
     if (line_c < R_N) return m_err("Less than two hexadecimal numbers provided");
-    int max_length = max(strlen(rands[0]), strlen(rands[1]));
-    for (int i = 0; i < R_N; i++) {
-        if (fill_zeroes(&(rands[i]), max_length) < 0) t_err("fill_zeroes");
-    }
+    int max_length = max(strlen(*a), strlen(*b));
+    if (fill_zeroes(a, max_length) < 0) t_err("fill_zeroes");
+    if (fill_zeroes(b, max_length) < 0) t_err("fill_zeroes");
     return 0;
 }
 
@@ -109,34 +108,67 @@ int dec_to_hex(int decVal, char **res) {
     return 0;
 }
 
-int multiply_rands(char *rands[R_N]) {
-    int status;
-    int pipefd[2];
-    pipe(pipefd);
-    pid_t cid = fork();
+/** 
+ * Copies half of a string to another string.
+ * @param dst Destination string.
+ * @param src Source string.
+ * @param half 0 if the first half should be copied, 1 for the second half.
+ * @param half_length Half length of the source string.
+ */
+void half_str(char *dst, char *src, int half, int half_length) {
+    char *start = src;
+    if (half == 1) start += half_length;
+    strcpy(dst, start);
+    if (half == 0) dst[half_length] = '\0';
+}
 
+int multiply_rands(char *a, char *b) {
+    int half_length = strlen(a) / 2;
+    char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
+    half_str(a_h, a, 0, half_length);
+    half_str(a_l, a, 1, half_length);
+    half_str(b_h, b, 0, half_length);
+    half_str(b_l, b, 1, half_length);
+    int status;
+    int pin_fd[2];
+    int pout_fd[2];
+    if (pipe(pin_fd) == -1) return t_err("pipe");
+    if (pipe(pout_fd) == -1) return t_err("pipe");
+    pid_t cid = fork();
     switch (cid) {
         case -1:
             return t_err("fork");
         case 0:
-            close(pipefd[1]);
-            dup2(pipefd[0], STDIN_FILENO);
-            close(pipefd[0]);
-
-            printf("child process\n");
-            execlp("./intmul", "./intmul", "test", NULL);
-            break;
+            close(pin_fd[1]);
+            close(pout_fd[0]);
+            if (dup2(pin_fd[0], STDIN_FILENO) == -1) return t_err("dup2");
+            if (dup2(pout_fd[1], STDOUT_FILENO) == -1) return t_err("dup2");
+            close(pin_fd[0]);
+            close(pout_fd[1]);
+            execlp("./intmul", "./intmul", NULL);
+            return t_err("execlp");
         default:
-            close(pipefd[0]);
-            //dup2(pipefd[1], STDOUT_FILENO);
-            //close(pipefd[1]);
+            close(pin_fd[0]);
+            close(pout_fd[1]);
 
-            FILE *f = fdopen(pipefd[1], "w");
-            if (f == NULL) t_err("fdopen");
-            if (fputs("3\n", f) == -1) return t_err("fputs");
-            if (fputs("2\n", f) == -1) return t_err("fputs");
-            fflush(f);
-            fclose(f);
+            FILE *pin_p = fdopen(pin_fd[1], "w");
+            if (pin_p == NULL) t_err("fdopen");
+            if (fprintf(pin_p, "%s\n", a_l) == -1) return t_err("fputs");
+            if (fprintf(pin_p, "%s\n", b_l) == -1) return t_err("fputs");
+            fflush(pin_p);
+
+            FILE *pout_p = fdopen(pout_fd[0], "r");
+            if (pout_p == NULL) t_err("fdopen");
+            char *result = NULL;
+            size_t len = 0;
+            if ((getline(&result, &len, pout_p)) == -1) return t_err("getline");
+            printf("%s\n", result);
+
+            free(result);
+            fclose(pin_p);
+            fclose(pout_p);
+            close(pin_fd[1]);
+            close(pout_fd[0]);
 
             waitpid(cid, &status, 0);
             if (WEXITSTATUS(status) == EXIT_SUCCESS) {
@@ -151,21 +183,21 @@ int multiply_rands(char *rands[R_N]) {
 
 int main(int argc, char **argv) {
     prog_name = argv[0];
-    char *rands[R_N] = {NULL, NULL}; /**< Operands to be multiplied. */
-    if (receive_rands(rands) < 0) {
-        free_rands(rands);
+    if (argc > 1) usage();
+    char *a = NULL, *b = NULL; /**< Operands to be multiplied. */
+    if (receive_rands(&a, &b) < 0) {
+        free_rands(a, b);
         e_err("receive_rands");
     }
-    int rand_length = strlen(rands[0]);
-    if (rand_length == 1) {
-        printf("%lX\n", strtol(rands[0], NULL, 16) * strtol(rands[1], NULL, 16));
-        printf("success\n");
+    if (strlen(a) == 1) {
+        printf("%lX\n", strtol(a, NULL, 16) * strtol(b, NULL, 16));
+        fflush(stdout);
     } else {
-        if (multiply_rands(rands) < 0) {
-            free_rands(rands);
+        if (multiply_rands(a, b) < 0) {
+            free_rands(a, b);
             e_err("multiply_rands");
         };
     }
-    free_rands(rands);
+    free_rands(a, b);
     return EXIT_SUCCESS;
 }
