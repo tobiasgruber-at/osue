@@ -22,30 +22,6 @@ void free_rands(char *a, char *b) {
     if (b != NULL) free(b);
 }
 
-/**
- * Fills up a hexadecimal number with leading zeroes, until it's length is a power of two and at least a given
- * min-length long.
- */
-int fill_zeroes(char **str, int min_len) {
-    char old_str[strlen(*str) + 1];
-    int new_len = 1;
-    strcpy(old_str, *str);
-    while (new_len < min_len) new_len *= 2;
-    int diff = new_len - strlen(old_str);
-    if (diff == 0) return 0;
-    // TODO: use realloc without leak
-    free(*str);
-    *str = (char *) calloc(new_len + 1, sizeof(char));
-    if (str == NULL) return t_err("calloc");
-    memset(*str, '0', diff);
-    strcat(*str, old_str);
-    return 0;
-}
-
-int max(int a, int b) {
-    return (a > b) ? a : b;
-}
-
 /** Gets operands and mallocs memory.. */
 int receive_rands(char **a, char **b) {
     char *line = NULL; /**< String of the current line. */
@@ -75,61 +51,7 @@ int receive_rands(char **a, char **b) {
     return 0;
 }
 
-int multiply(char *rands[R_N], int *res) {
-    if (strlen(rands[0]) == 1) {
-        //*res = rands[0] * rands[1];
-    }
-    return 0;
-}
-
-int dec_to_hex(int decVal, char **res) {
-    int base = 1;
-    int len = 0;
-    while (decVal / base > 0) {
-        base *= 16;
-        len++;
-    }
-    *res = (char *) malloc(sizeof(char) * (len + 1));
-    base /= 16;
-    for (int i = 0; i < len; i++) {
-        int offset;
-        int digit = decVal / base;
-        if (digit >= 0 && digit <= 9) offset = 48;
-        else if (digit >= 10 && digit <= 15) offset = 55;
-        else {
-            free(res);
-            return m_err("Invalid decimal input");
-        }
-        (*res)[i] = digit + offset;
-        decVal %= base;
-        base /= 16;
-    }
-    (*res)[len] = '\0';
-    return 0;
-}
-
-/** 
- * Copies half of a string to another string.
- * @param dst Destination string.
- * @param src Source string.
- * @param half 0 if the first half should be copied, 1 for the second half.
- * @param half_length Half length of the source string.
- */
-void half_str(char *dst, char *src, int half, int half_length) {
-    char *start = src;
-    if (half == 1) start += half_length;
-    strcpy(dst, start);
-    if (half == 0) dst[half_length] = '\0';
-}
-
-int multiply_rands(char *a, char *b) {
-    int half_length = strlen(a) / 2;
-    char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
-    half_str(a_h, a, 0, half_length);
-    half_str(a_l, a, 1, half_length);
-    half_str(b_h, b, 0, half_length);
-    half_str(b_l, b, 1, half_length);
-    int status;
+int fork_child(char **res, char *x, char *y) {
     int pin_fd[2];
     int pout_fd[2];
     if (pipe(pin_fd) == -1) return t_err("pipe");
@@ -153,23 +75,28 @@ int multiply_rands(char *a, char *b) {
 
             FILE *pin_p = fdopen(pin_fd[1], "w");
             if (pin_p == NULL) t_err("fdopen");
-            if (fprintf(pin_p, "%s\n", a_l) == -1) return t_err("fputs");
-            if (fprintf(pin_p, "%s\n", b_l) == -1) return t_err("fputs");
+            if (fprintf(pin_p, "%s\n", x) == -1) return t_err("fputs");
+            if (fprintf(pin_p, "%s\n", y) == -1) return t_err("fputs");
             fflush(pin_p);
+            fclose(pin_p);
+            close(pin_fd[1]);
 
             FILE *pout_p = fdopen(pout_fd[0], "r");
             if (pout_p == NULL) t_err("fdopen");
-            char *result = NULL;
+            char *line = NULL;
             size_t len = 0;
-            if ((getline(&result, &len, pout_p)) == -1) return t_err("getline");
-            printf("%s\n", result);
-
-            free(result);
-            fclose(pin_p);
+            if ((getline(&line, &len, pout_p)) == -1) return t_err("getline");
             fclose(pout_p);
-            close(pin_fd[1]);
             close(pout_fd[0]);
-
+            *res = (char *) malloc(sizeof(char) * (strlen(line) + 1));
+            if (*res == NULL) {
+                free(line);
+                return t_err("malloc");
+            }
+            strcpy(*res, line);
+            remove_newline(*res);
+            free(line);
+            int status;
             waitpid(cid, &status, 0);
             if (WEXITSTATUS(status) == EXIT_SUCCESS) {
 
@@ -178,6 +105,25 @@ int multiply_rands(char *a, char *b) {
             }
             break;
     }
+    return 0;
+}
+
+int multiply_rands(char *a, char *b) {
+    int half_length = strlen(a) / 2;
+    char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
+    half_str(a_h, a, 0, half_length);
+    half_str(a_l, a, 1, half_length);
+    half_str(b_h, b, 0, half_length);
+    half_str(b_l, b, 1, half_length);
+    char *res[4];
+    if (fork_child(&(res[0]), a_h, b_h) == -1) return t_err("fork_child");
+    if (fork_child(&(res[1]), a_h, b_l) == -1) return t_err("fork_child");
+    if (fork_child(&(res[2]), a_l, b_h) == -1) return t_err("fork_child");
+    if (fork_child(&(res[3]), a_l, b_l) == -1) return t_err("fork_child");
+    printf("%s\n", res[0]);
+    printf("%s\n", res[1]);
+    printf("%s\n", res[2]);
+    printf("%s\n", res[3]);
     return 0;
 }
 
@@ -190,7 +136,9 @@ int main(int argc, char **argv) {
         e_err("receive_rands");
     }
     if (strlen(a) == 1) {
-        printf("%lX\n", strtol(a, NULL, 16) * strtol(b, NULL, 16));
+        long res; /**< Decimal line of a hex multiplication. */
+        multiply(&res, a, b);
+        printf("%lX\n", res);
         fflush(stdout);
     } else {
         if (multiply_rands(a, b) < 0) {

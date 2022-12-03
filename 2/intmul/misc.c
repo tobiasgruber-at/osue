@@ -52,3 +52,34 @@ int is_hex(char *str) {
     int valid_symbols = str[strspn(str, "0123456789abcdefABCDEF")];
     return (strlen(str) != 0 && valid_symbols == 0) ? 0 : -1;
 }
+
+int fill_zeroes(char **str, int min_len) {
+    char old_str[strlen(*str) + 1];
+    int new_len = 1;
+    strcpy(old_str, *str);
+    while (new_len < min_len) new_len *= 2;
+    int diff = new_len - strlen(old_str);
+    if (diff == 0) return 0;
+    // TODO: use realloc without leak
+    free(*str);
+    *str = (char *) calloc(new_len + 1, sizeof(char));
+    if (str == NULL) return t_err("calloc");
+    memset(*str, '0', diff);
+    strcat(*str, old_str);
+    return 0;
+}
+
+int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+void multiply(long *dst, char *x, char *y) {
+    *dst = strtol(x, NULL, 16) * strtol(y, NULL, 16);
+}
+
+void half_str(char *dst, char *src, int half, int half_length) {
+    char *start = src;
+    if (half == 1) start += half_length;
+    strcpy(dst, start);
+    if (half == 0) dst[half_length] = '\0';
+}
