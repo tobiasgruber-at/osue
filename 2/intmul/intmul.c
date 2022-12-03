@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <math.h>
 
 // count of operands
 #define R_N 2 /**< Number of operands (for the multiplication) */
@@ -52,7 +54,10 @@ int receive_rands(char **a, char **b) {
     return 0;
 }
 
-int fork_child(char **res, char *x, char *y) {
+/**
+ * ...
+ */
+int fork_child(int *res, char *x, char *y) {
     int pin_fd[2];
     int pout_fd[2];
     if (pipe(pin_fd) == -1) return t_err("pipe");
@@ -89,13 +94,8 @@ int fork_child(char **res, char *x, char *y) {
             if ((getline(&line, &len, pout_p)) == -1) return t_err("getline");
             fclose(pout_p);
             close(pout_fd[0]);
-            *res = (char *) malloc(sizeof(char) * (strlen(line) + 1));
-            if (*res == NULL) {
-                free(line);
-                return t_err("malloc");
-            }
-            strcpy(*res, line);
-            remove_newline(*res);
+            remove_newline(line);
+            *res = strtol(line, NULL, 16);
             free(line);
             int status;
             waitpid(cid, &status, 0);
@@ -109,26 +109,37 @@ int fork_child(char **res, char *x, char *y) {
     return 0;
 }
 
+/**
+ * Evaluates the hex product.
+ * @param prod_dec Product as a decimal number.
+ * @param length Length of the hex product.
+ */
+int evaluate_prod(int prod_dec, int length) {
+    char *prod_hex = (char *) malloc(sizeof(char) * length);
+    if (prod_hex == NULL) return t_err("malloc");
+    sprintf(prod_hex, "%X", prod_dec);
+    fill_zeroes(&prod_hex, length);
+    printf("%s\n", prod_hex);
+    free(prod_hex);
+    return 0;
+}
+
 /** Multiplies two hex numbers. */
 int fork_multiply(char *a, char *b) {
-    int half_length = strlen(a) / 2;
+    int length = strlen(a);
+    int half_length = length / 2;
     char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
     half_str(a_h, a, 0, half_length);
     half_str(a_l, a, 1, half_length);
     half_str(b_h, b, 0, half_length);
     half_str(b_l, b, 1, half_length);
-    char *res[F_N] = { NULL, NULL, NULL, NULL };
+    int res[F_N] = { 0, 0, 0, 0 };
     if (fork_child(&(res[0]), a_h, b_h) == -1) return t_err("fork_child");
     if (fork_child(&(res[1]), a_h, b_l) == -1) return t_err("fork_child");
     if (fork_child(&(res[2]), a_l, b_h) == -1) return t_err("fork_child");
     if (fork_child(&(res[3]), a_l, b_l) == -1) return t_err("fork_child");
-    printf("%s\n", res[0]);
-    printf("%s\n", res[1]);
-    printf("%s\n", res[2]);
-    printf("%s\n", res[3]);
-    for (int i = 0; i < F_N; i++) {
-        if (res[i] != NULL) free(res[i]);
-    }
+    int prod_dec = res[0] * pow(16, length) + res[1] * pow(16, half_length) + res[2] * pow(16, half_length) + res[3];
+    if (evaluate_prod(prod_dec, strlen(a) * 2) == -1) return t_err("evaluate_prod");
     return 0;
 }
 
