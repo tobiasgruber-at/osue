@@ -59,7 +59,7 @@ static int receive_rands(char **a, char **b) {
  * @param x
  * @param y
  */
-static int fork_child(int *res, char *x, char *y) {
+static int fork_child(char **res, char *x, char *y) {
     int pin_fd[2];
     int pout_fd[2];
     if (pipe(pin_fd) == -1) return t_err("pipe");
@@ -93,21 +93,27 @@ static int fork_child(int *res, char *x, char *y) {
             if (pout_p == NULL) t_err("fdopen");
             char *line = NULL;
             size_t len = 0;
-            if ((getline(&line, &len, pout_p)) == -1) return t_err("getline");
+            if ((getline(&line, &len, pout_p)) == -1) {
+                free(line);
+                fclose(pout_p);
+                close(pout_fd[0]);
+                return t_err("getline");
+            }
             fclose(pout_p);
             close(pout_fd[0]);
-            remove_newline(line);
-            *res = strtol(line, NULL, 16);
+            *res = (char *) malloc(sizeof(char) * (strlen(line) + 1));
+            if (*res == NULL) {
+                free(line);
+                return t_err("malloc");
+            }
+            strcpy(*res, line);
+            remove_newline(*res);
             free(line);
+
             int status;
             waitpid(cid, &status, 0);
-
             // TODO: handle wait for all processes at once
-            if (WEXITSTATUS(status) == EXIT_SUCCESS) {
-
-            } else {
-                return t_err("waitpid");
-            }
+            if (WEXITSTATUS(status) != EXIT_SUCCESS) return t_err("waitpid");
             break;
     }
     return 0;
@@ -137,13 +143,20 @@ static int fork_multiply(char *a, char *b) {
     half_str(a_l, a, 1, half_length);
     half_str(b_h, b, 0, half_length);
     half_str(b_l, b, 1, half_length);
-    int res[F_N] = { 0, 0, 0, 0 };
+    char *res[F_N] = { NULL, NULL, NULL, NULL };
+    // TODO: error handling (cleanup)
     if (fork_child(&(res[0]), a_h, b_h) == -1) return t_err("fork_child");
     if (fork_child(&(res[1]), a_h, b_l) == -1) return t_err("fork_child");
     if (fork_child(&(res[2]), a_l, b_h) == -1) return t_err("fork_child");
     if (fork_child(&(res[3]), a_l, b_l) == -1) return t_err("fork_child");
-    int prod_dec = res[0] * pow(16, length) + res[1] * pow(16, half_length) + res[2] * pow(16, half_length) + res[3];
-    if (evaluate_prod(prod_dec, strlen(a) * 2) == -1) return t_err("evaluate_prod");
+    shift_left(&(res[0]), length);
+    shift_left(&(res[1]), half_length);
+    shift_left(&(res[2]), half_length);
+    char *prod;
+    add(&prod, res[0], res[1]);
+    add(&prod, prod, res[2]);
+    add(&prod, prod, res[3]);
+    printf("%s\n", prod);
     return 0;
 }
 
