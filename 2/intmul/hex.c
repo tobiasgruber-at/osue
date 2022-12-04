@@ -41,7 +41,6 @@ int fill_zeroes(char **str, int min_len, bool pow_of_two) {
     }
     int diff = new_len - strlen(old_str);
     if (diff <= 0) return 0;
-    // TODO: use realloc without leak
     free(*str);
     *str = (char *) calloc(new_len + 1, sizeof(char));
     if (str == NULL) return t_err("calloc");

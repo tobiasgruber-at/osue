@@ -39,7 +39,6 @@ static int receive_rands(char **a, char **b) {
             m_err("Input must be a hexadecimal number");
             return t_err("is_hex");
         }
-        // TODO: find out why mem-leak if second input for example "2g"
         *X = (char *) malloc(sizeof(char) * (strlen(line) + 1));
         if (*X == NULL) {
             free(line);
@@ -50,9 +49,11 @@ static int receive_rands(char **a, char **b) {
     }
     free(line);
     if (line_c < R_N) return m_err("Less than two hexadecimal numbers provided");
-    int max_length = max(strlen(*a), strlen(*b));
-    if (fill_zeroes(a, max_length, true) < 0) t_err("fill_zeroes");
-    if (fill_zeroes(b, max_length, true) < 0) t_err("fill_zeroes");
+    int max_len = max(strlen(*a), strlen(*b));
+    if (
+        fill_zeroes(a, max_len, true) < 0 ||
+        fill_zeroes(b, max_len, true) < 0
+    ) t_err("fill_zeroes");
     return 0;
 }
 
