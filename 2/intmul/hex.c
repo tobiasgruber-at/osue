@@ -3,9 +3,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void multiply(long *dst, char *x, char *y) {
-    // TODO: strtol to parse_int
-    *dst = strtol(x, NULL, 16) * strtol(y, NULL, 16);
+int multiply(char **dst, char *x, char *y) {
+    int x_int, y_int;
+    if (
+        parse_int(&x_int, x, 16) == -1 ||
+        parse_int(&y_int, y, 16) == -1
+    ) return t_err("parse_int");
+    int prod_dec = x_int * y_int;
+    int len = strlen(x) * 2;
+    *dst = (char *) malloc(sizeof(char) * (len + 1));
+    if (*dst == NULL) return t_err("malloc");
+    sprintf(*dst, "%x", prod_dec);
+    fill_zeroes(dst, len, false);
+    return 0;
 }
 
 int is_hex(char *str) {

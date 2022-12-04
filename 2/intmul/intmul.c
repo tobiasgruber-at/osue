@@ -13,6 +13,9 @@
 
 char *prog_name;
 
+/**
+ * Prints the program usage.
+ */
 static void usage() {
     fprintf(stderr, "Usage: %s\n", prog_name);
     exit(EXIT_FAILURE);
@@ -55,6 +58,7 @@ static int receive_rands(char **a, char **b) {
 
 /**
  * Delegates a part of the computation to a forked child.
+ * @details
  * @param res
  * @param x
  * @param y
@@ -130,21 +134,9 @@ static int fork_child(char **res, char *x, char *y) {
 }
 
 /**
- * Evaluates the hex product.
- * @param prod_dec Product as a decimal number.
- * @param length Length of the hex product.
+ * Multiplies two hex numbers.
+ * @details The hex numbers are not limited in size.
  */
-static int evaluate_prod(int prod_dec, int length) {
-    char *prod_hex = (char *) malloc(sizeof(char) * (length + 1));
-    if (prod_hex == NULL) return t_err("malloc");
-    sprintf(prod_hex, "%x", prod_dec);
-    fill_zeroes(&prod_hex, length, false);
-    printf("%s\n", prod_hex);
-    free(prod_hex);
-    return 0;
-}
-
-/** Multiplies two hex numbers. */
 static int fork_multiply(char *a, char *b) {
     int len = strlen(a), half_len = len / 2;
     char a_h[half_len + 1], a_l[half_len + 1], b_h[half_len + 1], b_l[half_len + 1];
@@ -194,9 +186,10 @@ int main(int argc, char **argv) {
         e_err("receive_rands");
     }
     if (strlen(a) == 1) {
-        long prod_dec; /**< Decimal line of a hex multiplication. */
-        multiply(&prod_dec, a, b);
-        evaluate_prod(prod_dec, strlen(a) * 2);
+        char *prod_hex;
+        multiply(&prod_hex, a, b);
+        printf("%s\n", prod_hex);
+        free(prod_hex);
         fflush(stdout);
     } else if (fork_multiply(a, b) < 0) {
         free_rands(a, b);

@@ -4,7 +4,7 @@
  * @details Includes operations from handling errors to parsing integers.
  * @file misc.h
  * @author Tobias Gruber, 11912367
- * @date 30.10.2022
+ * @date 19.11.2022
  **/
 
 char *prog_name; /**> The programs name. */
@@ -51,9 +51,15 @@ void remove_newline(char src[]);
  */
 int parse_int(int *dst, char *src, int base);
 
+/** Parses an integer from a character. */
 int parse_c_int(int *dst, char src, int base);
 
 /** Gets the max of two numbers. */
 int max(int a, int b);
 
+/**
+ * Frees memory of a string array.
+ * @param x
+ * @param len
+ */
 void free_arr(char *x[], int len);
