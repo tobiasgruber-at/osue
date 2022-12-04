@@ -1,11 +1,10 @@
-#include "misc.h"
+#include "hex.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <math.h>
 
 // count of operands
@@ -14,19 +13,19 @@
 
 char *prog_name;
 
-void usage() {
+static void usage() {
     fprintf(stderr, "Usage: %s\n", prog_name);
     exit(EXIT_FAILURE);
 }
 
 /** Frees allocated memory for the operands. */
-void free_rands(char *a, char *b) {
+static void free_rands(char *a, char *b) {
     if (a != NULL) free(a);
     if (b != NULL) free(b);
 }
 
 /** Gets operands and mallocs memory.. */
-int receive_rands(char **a, char **b) {
+static int receive_rands(char **a, char **b) {
     char *line = NULL; /**< String of the current line. */
     size_t len = 0, line_c = 0;
     while ((getline(&line, &len, stdin)) > 0) {
@@ -49,8 +48,8 @@ int receive_rands(char **a, char **b) {
     free(line);
     if (line_c < R_N) return m_err("Less than two hexadecimal numbers provided");
     int max_length = max(strlen(*a), strlen(*b));
-    if (fill_zeroes(a, max_length) < 0) t_err("fill_zeroes");
-    if (fill_zeroes(b, max_length) < 0) t_err("fill_zeroes");
+    if (fill_zeroes(a, max_length, true) < 0) t_err("fill_zeroes");
+    if (fill_zeroes(b, max_length, true) < 0) t_err("fill_zeroes");
     return 0;
 }
 
@@ -60,7 +59,7 @@ int receive_rands(char **a, char **b) {
  * @param x
  * @param y
  */
-int fork_child(int *res, char *x, char *y) {
+static int fork_child(int *res, char *x, char *y) {
     int pin_fd[2];
     int pout_fd[2];
     if (pipe(pin_fd) == -1) return t_err("pipe");
@@ -102,6 +101,8 @@ int fork_child(int *res, char *x, char *y) {
             free(line);
             int status;
             waitpid(cid, &status, 0);
+
+            // TODO: handle wait for all processes at once
             if (WEXITSTATUS(status) == EXIT_SUCCESS) {
 
             } else {
@@ -117,18 +118,18 @@ int fork_child(int *res, char *x, char *y) {
  * @param prod_dec Product as a decimal number.
  * @param length Length of the hex product.
  */
-int evaluate_prod(int prod_dec, int length) {
+static int evaluate_prod(int prod_dec, int length) {
     char *prod_hex = (char *) malloc(sizeof(char) * (length + 1));
     if (prod_hex == NULL) return t_err("malloc");
     sprintf(prod_hex, "%x", prod_dec);
-    fill_zeroes(&prod_hex, length);
+    fill_zeroes(&prod_hex, length, false);
     printf("%s\n", prod_hex);
     free(prod_hex);
     return 0;
 }
 
 /** Multiplies two hex numbers. */
-int fork_multiply(char *a, char *b) {
+static int fork_multiply(char *a, char *b) {
     int length = strlen(a);
     int half_length = length / 2;
     char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];

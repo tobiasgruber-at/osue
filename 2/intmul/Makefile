@@ -9,12 +9,14 @@ LDFLAGS = -lm # linker flags
 .PHONY: all clean
 all: intmul
 
-intmul: intmul.o misc.o
+intmul: intmul.o hex.o misc.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+intmul.o: intmul.c hex.h
+hex.o: hex.c hex.h misc.h
 misc.o: misc.c misc.h
 
 clean:

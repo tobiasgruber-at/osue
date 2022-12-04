@@ -38,49 +38,24 @@ void remove_newline(char src[]) {
     }
 }
 
-int parse_int(int *dst, char *src) {
+int parse_int(int *dst, char *src, int base) {
     if (src == NULL) return -1;
     char *end = NULL;
     long num;
-    num = strtol(src, &end, 10);
+    num = strtol(src, &end, base);
     if (*end != '\0' || num < 0) return m_err("Number must be a positive integer");
     if (num > INT_MAX) return m_err("Number out of integer bounds");
     *dst = (int) num;
     return 0;
 }
 
-int is_hex(char *str) {
-    int valid_symbols = str[strspn(str, "0123456789abcdefABCDEF")];
-    return (strlen(str) != 0 && valid_symbols == 0) ? 0 : -1;
-}
-
-int fill_zeroes(char **str, int min_len) {
-    char old_str[strlen(*str) + 1];
-    int new_len = 1;
-    strcpy(old_str, *str);
-    while (new_len < min_len) new_len *= 2;
-    int diff = new_len - strlen(old_str);
-    if (diff == 0) return 0;
-    // TODO: use realloc without leak
-    free(*str);
-    *str = (char *) calloc(new_len + 1, sizeof(char));
-    if (str == NULL) return t_err("calloc");
-    memset(*str, '0', diff);
-    strcat(*str, old_str);
+int parse_c_int(int *dst, char src, int base) {
+    char src_str[2] = {0};
+    src_str[0] = src;
+    if (parse_int(dst, src_str, base) < 0) return t_err("parse_int");
     return 0;
 }
 
 int max(int a, int b) {
     return (a > b) ? a : b;
-}
-
-void multiply(long *dst, char *x, char *y) {
-    *dst = strtol(x, NULL, 16) * strtol(y, NULL, 16);
-}
-
-void half_str(char *dst, char *src, int half, int half_length) {
-    char *start = src;
-    if (half == 1) start += half_length;
-    strncpy(dst, start, half_length);
-    dst[half_length] = '\0';
 }
