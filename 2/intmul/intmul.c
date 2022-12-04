@@ -54,7 +54,7 @@ static int receive_rands(char **a, char **b) {
 }
 
 /**
- * Passes a part of the computation to a forked child.
+ * Delegates a part of the computation to a forked child.
  * @param res
  * @param x
  * @param y
@@ -71,8 +71,10 @@ static int fork_child(char **res, char *x, char *y) {
         case 0:
             close(pin_fd[1]);
             close(pout_fd[0]);
-            if (dup2(pin_fd[0], STDIN_FILENO) == -1) return t_err("dup2");
-            if (dup2(pout_fd[1], STDOUT_FILENO) == -1) return t_err("dup2");
+            if (
+                dup2(pin_fd[0], STDIN_FILENO) == -1 ||
+                dup2(pout_fd[1], STDOUT_FILENO) == -1
+            ) return t_err("dup2");
             close(pin_fd[0]);
             close(pout_fd[1]);
             execlp("./intmul", "./intmul", NULL);
@@ -83,8 +85,15 @@ static int fork_child(char **res, char *x, char *y) {
 
             FILE *pin_p = fdopen(pin_fd[1], "w");
             if (pin_p == NULL) t_err("fdopen");
-            if (fprintf(pin_p, "%s\n", x) == -1) return t_err("fputs");
-            if (fprintf(pin_p, "%s\n", y) == -1) return t_err("fputs");
+            if (
+                fprintf(pin_p, "%s\n", x) == -1 ||
+                fprintf(pin_p, "%s\n", y) == -1
+            ) {
+                fclose(pin_p);
+                close(pin_fd[1]);
+                close(pout_fd[0]);
+                return t_err("fprintf");
+            }
             fflush(pin_p);
             fclose(pin_p);
             close(pin_fd[1]);
@@ -101,6 +110,7 @@ static int fork_child(char **res, char *x, char *y) {
             }
             fclose(pout_p);
             close(pout_fd[0]);
+
             *res = (char *) malloc(sizeof(char) * (strlen(line) + 1));
             if (*res == NULL) {
                 free(line);
@@ -136,30 +146,41 @@ static int evaluate_prod(int prod_dec, int length) {
 
 /** Multiplies two hex numbers. */
 static int fork_multiply(char *a, char *b) {
-    int length = strlen(a);
-    int half_length = length / 2;
-    char a_h[half_length + 1], a_l[half_length + 1], b_h[half_length + 1], b_l[half_length + 1];
-    half_str(a_h, a, 0, half_length);
-    half_str(a_l, a, 1, half_length);
-    half_str(b_h, b, 0, half_length);
-    half_str(b_l, b, 1, half_length);
+    int len = strlen(a), half_len = len / 2;
+    char a_h[half_len + 1], a_l[half_len + 1], b_h[half_len + 1], b_l[half_len + 1];
+    half_str(a_h, a, 0, half_len);
+    half_str(a_l, a, 1, half_len);
+    half_str(b_h, b, 0, half_len);
+    half_str(b_l, b, 1, half_len);
     char *res[F_N] = { NULL, NULL, NULL, NULL };
-    // TODO: error handling (cleanup)
-    if (fork_child(&(res[0]), a_h, b_h) == -1) return t_err("fork_child");
-    if (fork_child(&(res[1]), a_h, b_l) == -1) return t_err("fork_child");
-    if (fork_child(&(res[2]), a_l, b_h) == -1) return t_err("fork_child");
-    if (fork_child(&(res[3]), a_l, b_l) == -1) return t_err("fork_child");
-    shift_left(&(res[0]), length);
-    shift_left(&(res[1]), half_length);
-    shift_left(&(res[2]), half_length);
-    char *prod = NULL;
-    add(&prod, &(res[0]), &(res[1]));
-    add(&prod, &prod, &(res[2]));
-    add(&prod, &prod, &(res[3]));
-    printf("%s\n", prod);
-    for (int i = 0; i < F_N; i++) {
-        if (res[i] != NULL) free(res[i]);
+    if (
+        fork_child(&(res[0]), a_h, b_h) == -1 ||
+        fork_child(&(res[1]), a_h, b_l) == -1 ||
+        fork_child(&(res[2]), a_l, b_h) == -1 ||
+        fork_child(&(res[3]), a_l, b_l) == -1
+    ) {
+        free_arr(res, F_N);
+        return t_err("fork_child");
     }
+    if (
+        shift_left(&(res[0]), len) == -1 ||
+        shift_left(&(res[1]), half_len) == -1 ||
+        shift_left(&(res[2]), half_len) == -1
+    ) {
+        free_arr(res, F_N);
+        return t_err("shift_left");
+    }
+    char *prod = NULL;
+    if (
+        add(&prod, &(res[0]), &(res[1])) == -1 ||
+        add(&prod, &prod, &(res[2])) == -1 ||
+        add(&prod, &prod, &(res[3])) == -1
+    ) {
+        free_arr(res, F_N);
+        return t_err("add");
+    }
+    printf("%s\n", prod);
+    free_arr(res, F_N);
     free(prod);
     return 0;
 }
@@ -177,11 +198,9 @@ int main(int argc, char **argv) {
         multiply(&prod_dec, a, b);
         evaluate_prod(prod_dec, strlen(a) * 2);
         fflush(stdout);
-    } else {
-        if (fork_multiply(a, b) < 0) {
-            free_rands(a, b);
-            e_err("fork_multiply");
-        };
+    } else if (fork_multiply(a, b) < 0) {
+        free_rands(a, b);
+        e_err("fork_multiply");
     }
     free_rands(a, b);
     return EXIT_SUCCESS;

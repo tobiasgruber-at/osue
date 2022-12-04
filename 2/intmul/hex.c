@@ -53,8 +53,8 @@ int shift_left(char **str, int n) {
 
 int add(char **res, char **x, char **y) {
     int len = max(strlen(*x), strlen(*y));
-    fill_zeroes(x, len, false);
-    fill_zeroes(y, len, false);
+    if (fill_zeroes(x, len, false) == -1) return t_err("fill_zeroes");
+    if (fill_zeroes(y, len, false) == -1) return t_err("fill_zeroes");
     char sum[len + 1];
     memset(sum, '0', len);
     int overflow = 0;
@@ -72,7 +72,7 @@ int add(char **res, char **x, char **y) {
         sprintf(sum_hex, "%x", sum_dec);
         sum[i] = sum_hex[0];
     }
-    *res = (char *) realloc(res, sizeof(char) * (len + 1 + overflow));
+    *res = (char *) realloc(*res, sizeof(char) * (len + 1 + overflow));
     if (*res == NULL) return t_err("realloc");
     (*res)[0] = '1';
     strncpy((*res) + overflow, sum, len + overflow);

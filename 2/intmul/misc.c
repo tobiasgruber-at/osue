@@ -59,3 +59,9 @@ int parse_c_int(int *dst, char src, int base) {
 int max(int a, int b) {
     return (a > b) ? a : b;
 }
+
+void free_arr(char *x[], int len) {
+    for (int i = 0; i < len; i++) {
+        if (x[i] != NULL) free(x[i]);
+    }
+}

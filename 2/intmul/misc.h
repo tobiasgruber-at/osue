@@ -55,3 +55,5 @@ int parse_c_int(int *dst, char src, int base);
 
 /** Gets the max of two numbers. */
 int max(int a, int b);
+
+void free_arr(char *x[], int len);
