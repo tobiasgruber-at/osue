@@ -51,16 +51,17 @@ int shift_left(char **str, int n) {
     return 0;
 }
 
-int add(char **res, char *x, char *y) {
-    int m = max(strlen(x), strlen(y));
-    fill_zeroes(&x, m, false);
-    fill_zeroes(&y, m, false);
-    char sum[strlen(x) + 1];
+int add(char **res, char **x, char **y) {
+    int len = max(strlen(*x), strlen(*y));
+    fill_zeroes(x, len, false);
+    fill_zeroes(y, len, false);
+    char sum[len + 1];
+    memset(sum, '0', len);
     int overflow = 0;
-    for (int i = strlen(x) - 1; i >= 0; i--) {
+    for (int i = len - 1; i >= 0; i--) {
         int x_dec, y_dec;
-        if (parse_c_int(&x_dec, x[i], 16) == -1) return t_err("parse_c_int");
-        if (parse_c_int(&y_dec, y[i], 16) == -1) return t_err("parse_c_int");
+        if (parse_c_int(&x_dec, (*x)[i], 16) == -1) return t_err("parse_c_int");
+        if (parse_c_int(&y_dec, (*y)[i], 16) == -1) return t_err("parse_c_int");
         int sum_dec = x_dec + y_dec + overflow;
         overflow = 0;
         if (sum_dec > 15) {
@@ -71,10 +72,10 @@ int add(char **res, char *x, char *y) {
         sprintf(sum_hex, "%x", sum_dec);
         sum[i] = sum_hex[0];
     }
-    *res = (char *) malloc(sizeof(char) * (strlen(x) + 1 + overflow));
-    if (*res == NULL) return t_err("calloc");
+    *res = (char *) realloc(res, sizeof(char) * (len + 1 + overflow));
+    if (*res == NULL) return t_err("realloc");
     (*res)[0] = '1';
-    strcpy((*res) + overflow, sum);
-    (*res)[strlen(x) + overflow] = '\0';
+    strncpy((*res) + overflow, sum, len + overflow);
+    (*res)[len + overflow] = '\0';
     return 0;
 }

@@ -23,4 +23,4 @@ int fill_zeroes(char **str, int min_len, bool pow_of_two);
 
 int shift_left(char **str, int n);
 
-int add(char **res, char *x, char *y);
+int add(char **res, char **x, char **y);

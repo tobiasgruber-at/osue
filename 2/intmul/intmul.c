@@ -152,11 +152,15 @@ static int fork_multiply(char *a, char *b) {
     shift_left(&(res[0]), length);
     shift_left(&(res[1]), half_length);
     shift_left(&(res[2]), half_length);
-    char *prod;
-    add(&prod, res[0], res[1]);
-    add(&prod, prod, res[2]);
-    add(&prod, prod, res[3]);
+    char *prod = NULL;
+    add(&prod, &(res[0]), &(res[1]));
+    add(&prod, &prod, &(res[2]));
+    add(&prod, &prod, &(res[3]));
     printf("%s\n", prod);
+    for (int i = 0; i < F_N; i++) {
+        if (res[i] != NULL) free(res[i]);
+    }
+    free(prod);
     return 0;
 }
 
