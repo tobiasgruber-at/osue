@@ -55,7 +55,10 @@ int receive_rands(char **a, char **b) {
 }
 
 /**
- * ...
+ * Passes a part of the computation to a forked child.
+ * @param res
+ * @param x
+ * @param y
  */
 int fork_child(int *res, char *x, char *y) {
     int pin_fd[2];
@@ -117,7 +120,7 @@ int fork_child(int *res, char *x, char *y) {
 int evaluate_prod(int prod_dec, int length) {
     char *prod_hex = (char *) malloc(sizeof(char) * (length + 1));
     if (prod_hex == NULL) return t_err("malloc");
-    sprintf(prod_hex, "%X", prod_dec);
+    sprintf(prod_hex, "%x", prod_dec);
     fill_zeroes(&prod_hex, length);
     printf("%s\n", prod_hex);
     free(prod_hex);
@@ -152,9 +155,9 @@ int main(int argc, char **argv) {
         e_err("receive_rands");
     }
     if (strlen(a) == 1) {
-        long res; /**< Decimal line of a hex multiplication. */
-        multiply(&res, a, b);
-        printf("%lX\n", res);
+        long prod_dec; /**< Decimal line of a hex multiplication. */
+        multiply(&prod_dec, a, b);
+        evaluate_prod(prod_dec, strlen(a) * 2);
         fflush(stdout);
     } else {
         if (fork_multiply(a, b) < 0) {

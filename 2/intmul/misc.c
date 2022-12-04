@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <ctype.h>
 
 #define ASCII_NEW_LINE 10
 
@@ -80,6 +81,6 @@ void multiply(long *dst, char *x, char *y) {
 void half_str(char *dst, char *src, int half, int half_length) {
     char *start = src;
     if (half == 1) start += half_length;
-    strcpy(dst, start);
-    if (half == 0) dst[half_length] = '\0';
+    strncpy(dst, start, half_length);
+    dst[half_length] = '\0';
 }
