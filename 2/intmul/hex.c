@@ -6,8 +6,8 @@
 int multiply(char **dst, char *x, char *y) {
     int x_int, y_int;
     if (
-        parse_int(&x_int, x, 16) == -1 ||
-        parse_int(&y_int, y, 16) == -1
+        parse_int(&x_int, x) == -1 ||
+        parse_int(&y_int, y) == -1
     ) return t_err("parse_int");
     int prod_dec = x_int * y_int;
     int len = strlen(x) * 2;
@@ -69,8 +69,8 @@ int add(char **res, char **x, char **y) {
     int overflow = 0;
     for (int i = len - 1; i >= 0; i--) {
         int x_dec, y_dec;
-        if (parse_c_int(&x_dec, (*x)[i], 16) == -1) return t_err("parse_c_int");
-        if (parse_c_int(&y_dec, (*y)[i], 16) == -1) return t_err("parse_c_int");
+        if (parse_c_int(&x_dec, (*x)[i]) == -1) return t_err("parse_c_int");
+        if (parse_c_int(&y_dec, (*y)[i]) == -1) return t_err("parse_c_int");
         int sum_dec = x_dec + y_dec + overflow;
         overflow = 0;
         if (sum_dec > 15) {

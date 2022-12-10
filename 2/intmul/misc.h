@@ -13,7 +13,7 @@ char *prog_name; /**> The programs name. */
  * @brief Logs an error.
  * @details Prints an error message to stderr.<br>
  * Used global variables: prog_name
- * @param msg
+ * @param msg Error message.
  * @return -1
  */
 int m_err(char *msg);
@@ -43,23 +43,34 @@ void e_err(char *fun_name);
 void remove_newline(char src[]);
 
 /**
- * @brief Parses an integer from a string.
+ * @brief Parses an integer from a hexadecimal number.
  * @details Validates if the string is a positive integer.
  * @param dst Pointer to be updated with the parsed integer.
- * @param src String to be parsed.
+ * @param src String to be parsed of the hexadecimal number.
  * @return 0 on success, -1 on error.
  */
-int parse_int(int *dst, char *src, int base);
+int parse_int(int *dst, char *src);
 
-/** Parses an integer from a character. */
-int parse_c_int(int *dst, char src, int base);
+/**
+ * @brief Parses an integer from a hexadecimal character.
+ * @details Validates if the character is a positive integer.
+ * @param dst Pointer to be updated with the parsed integer.
+ * @param src Hexadecimal character to be parsed.
+ * @return 0 on success, -1 on error.
+ */
+int parse_c_int(int *dst, char src);
 
-/** Gets the max of two numbers. */
+/**
+ * @brief Gets the maximum of two numbers.
+ * @param a First number.
+ * @param b Second number.
+ * @return Maximum.
+ */
 int max(int a, int b);
 
 /**
  * Frees memory of a string array.
- * @param x
- * @param len
+ * @param x Array of strings.
+ * @param len Length of the array.
  */
 void free_arr(char *x[], int len);
