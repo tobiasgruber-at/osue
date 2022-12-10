@@ -1,3 +1,15 @@
+/**
+ * Intmul module.
+ * @brief Main entry point for the intmul program.
+ * @details Efficiently performs a multiplication of two hexadecimal numbers of any length.<br>
+ * To split up and accelerate the computation, it recursively creates child processes that calculate parts of the
+ * multiplication.<br>
+ * Numbers are read from <strong>stdin</strong> and outputted to <strong>stdout</strong>.
+ * @file intmul.c
+ * @author Tobias Gruber, 11912367
+ * @date 18.11.2022
+ **/
+
 #include "hex.h"
 #include <stdio.h>
 #include <string.h>
@@ -7,8 +19,9 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define R_N 2 /**< Number of operands (for the multiplication) */
-#define F_N 4 /**< Number of forked processes (for the multiplication) */
+#define R_N 2 /**< Number of operands for the multiplication. */
+#define F_N 4 /**< Number of forked child processes. */
+#define P_N 2 /**< Number of pipe ends. */
 
 char *prog_name;
 
@@ -17,13 +30,13 @@ char *prog_name;
  * @details Prints to <strong>stderr</strong> and exits with <strong>EXIT_FAILURE</strong>.<br>
  * Used global variables: prog_name
  */
-static void usage() {
+static void usage(void) {
     fprintf(stderr, "Usage: %s\n", prog_name);
     exit(EXIT_FAILURE);
 }
 
 /**
- * Waits for all given processes to terminate.
+ * @brief Waits for all given processes to terminate.
  * @param pid Array of all process ids. -1 as id indicates, that is was not set yet.
  * @return 0 on success, -1 on error.
  */
@@ -34,13 +47,17 @@ static int wait_all(pid_t pid[F_N])
     {
         if (pid[i] == -1) continue;
         int status;
-        if (waitpid(pid[i], &status, 0 || WEXITSTATUS(status) != EXIT_SUCCESS) < 0) err = 1;
+        if (waitpid(pid[i], &status, 0) < 0 || WEXITSTATUS(status) != EXIT_SUCCESS) err = 1;
     }
     if (err == 1) return m_err("waitpid");
     return 0;
 }
 
-/** Frees allocated memory of the operands. */
+/**
+ * @brief Frees allocated memory of the operands.
+ * @param a First operand.
+ * @param b Second operand.
+ */
 static void free_rands(char *a, char *b) {
     if (a != NULL) free(a);
     if (b != NULL) free(b);
@@ -105,12 +122,12 @@ static int fork_child(char **res, pid_t *cid, char *x, char *y) {
      * Pipe to pass input to child as an array.
      * @details First element is read end, second one the write end.
      */
-    int pin_fd[2];
+    int pin_fd[P_N];
     /**
      * Pipe to pass output to parent as an array.
      * @details First element is read end, second one the write end.
      */
-    int pout_fd[2];
+    int pout_fd[P_N];
     if (pipe(pin_fd) == -1) return t_err("pipe");
     if (pipe(pout_fd) == -1) return t_err("pipe");
     *cid = fork();
@@ -174,7 +191,7 @@ static int fork_child(char **res, pid_t *cid, char *x, char *y) {
 }
 
 /**
- * Multiplies two hex numbers recursively.
+ * @brief Multiplies two hex numbers of any length recursively.
  * @details Output is printed to <strong>stdout</strong>.<br>
  * Delegates parts of the calculation to four child processes and brings them together to receive the product.<br>
  * The parent process is waiting until all children are done.<br>
@@ -230,6 +247,18 @@ static int multiply_recursively(char *a, char *b) {
     return 0;
 }
 
+/**
+ * @brief Performs a multiplication of two hexadecimal numbers.
+ * @details Reads two numbers of any length as operands from <strong>stdin</strong> and outputs the product to
+ * <strong>stdout</strong>.<br>
+ * Generates child processes that recursively call this program to split up the calculation work.<br>
+ * Child processes communicate with their parents by pipes.<br>
+ * Takes no arguments.<br>
+ * If an error occurs it exits with <strong>EXIT_FAILURE</strong>.
+ * @param argc Argument counter.
+ * @param argv Argument vector.
+ * @return <strong>EXIT_SUCCESS</strong> on successful termination.
+ */
 int main(int argc, char **argv) {
     prog_name = argv[0];
     if (argc > 1) usage();

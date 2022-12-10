@@ -1,3 +1,11 @@
+/**
+ * Hex module.
+ * @brief Implementation of the hex module definitions.
+ * @file hex.c
+ * @author Tobias Gruber, 11912367
+ * @date 4.12.2022
+ **/
+
 #include "hex.h"
 #include <string.h>
 #include <stdlib.h>
@@ -73,8 +81,8 @@ int add(char **res, char **x, char **y) {
         if (parse_c_int(&y_dec, (*y)[i]) == -1) return t_err("parse_c_int");
         int sum_dec = x_dec + y_dec + overflow;
         overflow = 0;
-        if (sum_dec > 15) {
-            sum_dec -= 16;
+        if (sum_dec > HEX_B - 1) {
+            sum_dec -= HEX_B;
             overflow = 1;
         }
         char sum_hex[2];

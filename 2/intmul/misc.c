@@ -1,5 +1,5 @@
 /**
- * Miscellaneous module
+ * Miscellaneous module.
  * @brief Implementation of the miscellaneous module definitions.
  * @file misc.c
  * @author Tobias Gruber, 11912367
@@ -40,7 +40,7 @@ int parse_int(int *dst, char *src) {
     if (src == NULL) return -1;
     char *end = NULL;
     long num;
-    num = strtol(src, &end, 16);
+    num = strtol(src, &end, HEX_B);
     if (*end != '\0' || num < 0) {
         errno = EINVAL;
         return m_err("Number must be a positive integer");

@@ -11,9 +11,10 @@
 #include "stdbool.h"
 
 /**
- * @brief Multiplies two hex numbers.
- * @details x and y must not exceed a size of 8 bytes (size of an integer).<br>
- * Transforms res to have a length that is a power of two.
+ * @brief Multiplies two hex numbers of restricted length.
+ * @details Parses the input as decimal numbers, multiplies them and transforms them to hexadecimal numbers.<br>
+ * x and y must not exceed a size of 8 bytes (size of an integer).<br>
+ * Transforms res to have a length that is a power of two.<br>
  * Allocates necessary memory for <strong>res</strong>.
  * @param dst Pointer to be updated with the product as a string.
  * @param x First hex number string.
@@ -31,8 +32,8 @@ int multiply(char **dst, char *x, char *y);
 int is_hex(char *str);
 
 /**
- * Copies half of a string to another string.<br>
- * <strong>dst</strong> must have enough allocated memory.
+ * @brief Copies half of a string to another string.<br>
+ * @details <strong>dst</strong> must have enough allocated memory.
  * @param dst String to be updated.
  * @param src String to be copied.
  * @param half 0 if the first half should be copied, 1 for the second half.
@@ -41,7 +42,7 @@ int is_hex(char *str);
 void half_str(char *dst, char *src, int half, int half_length);
 
 /**
- * Fills up a hexadecimal number with leading zeroes.
+ * @brief Fills up a hexadecimal number with leading zeroes.
  * @details Allocates necessary memory for <strong>str</strong>.
  * @param str Pointer to be updated with the resulting string.
  * @param min_len Length of the new string. It might become even longer if pow_of_two is true.
@@ -51,8 +52,9 @@ void half_str(char *dst, char *src, int half, int half_length);
 int fill_zeroes(char **str, int min_len, bool pow_of_two);
 
 /**
- * Shifts a hex number n digits to the left.
- * @details Frees existing and allocates new memory for <strong>str</strong>.
+ * @brief Shifts a hex number n digits to the left.
+ * @details New digits are filled with zeroes.<br>
+ * Frees existing and allocates new memory for <strong>str</strong>.
  * @param str Pointer to be updated with the resulting string.
  * @param n Digits to be shifted.
  * @return 0 on success, -1 on error.
@@ -60,7 +62,7 @@ int fill_zeroes(char **str, int min_len, bool pow_of_two);
 int shift_left(char **str, int n);
 
 /**
- * Calculates the sum of two hex numbers.
+ * @brief Calculates the sum of two hex numbers of any length.
  * @details Transforms both numbers to have the same length and iteratively sums up every digit
  * of both from right to left.<br>
  * Allocates necessary memory for <strong>res</strong>.

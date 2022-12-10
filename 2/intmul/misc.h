@@ -1,11 +1,13 @@
 /**
  * Miscellaneous module definitions.
  * @brief Covers miscellaneous operations.
- * @details Includes operations from handling errors to parsing integers.
+ * @details Includes operations from handling errors, parsing, transformations to memory manipulations.
  * @file misc.h
  * @author Tobias Gruber, 11912367
  * @date 19.11.2022
  **/
+
+#define HEX_B 16 /**< Base of hexadecimal numbers. */
 
 char *prog_name; /**> The programs name. */
 
@@ -69,7 +71,7 @@ int parse_c_int(int *dst, char src);
 int max(int a, int b);
 
 /**
- * Frees memory of a string array.
+ * @brief Frees memory of a string array.
  * @param x Array of strings.
  * @param len Length of the array.
  */
