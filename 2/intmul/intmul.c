@@ -242,6 +242,7 @@ static int multiply_recursively(char *a, char *b) {
         return t_err("add");
     }
     printf("%s\n", prod);
+    fflush(stdout);
     free_arr(res, F_N);
     free(prod);
     return 0;
