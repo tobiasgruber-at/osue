@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <errno.h>
 
 #define HTTP_PREFIX "http://"
 
@@ -12,8 +13,9 @@ typedef struct Options {
     int pflag;
     int oflag;
     int dflag;
-    char *url_path;
-    char *port;
+    char *server_url; /**< Host and filepath */
+    char *server_host;
+    char *server_port;
     FILE *output;
 } t_opt;
 
@@ -28,15 +30,56 @@ static void usage(void) {
     exit(EXIT_FAILURE);
 }
 
+/**
+ * Mallocs space for server_host
+ * @param opts
+ * @param argv
+ * @return
+ */
+static int parse_url_details(t_opt *opts, char **argv) {
+    char *url_with_protocol = argv[optind];
+    if (strncmp(url_with_protocol, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) return m_err("incorrect protocol");
+    opts->server_url = url_with_protocol + strlen(HTTP_PREFIX);
+    opts->server_host = (char *) malloc(sizeof(char) * strlen(opts->server_url) + 1);
+    strcpy(opts->server_host, opts->server_url);
+    if (
+        (opts->server_host = strtok(opts->server_host, "/")) == NULL ||
+        (opts->server_host = strtok(opts->server_host, "?")) == NULL
+    ) {
+        free(opts->server_host);
+        return t_err("strtok");
+    }
+    return 0;
+}
+
+static int open_output(t_opt *opts, char *output) {
+    if (opts->oflag || opts->dflag) {
+        if (opts->dflag) {
+            char *file_name = strrchr(opts->server_url, '/');
+            if (file_name == NULL) file_name = "";
+            else file_name++;
+            if (strlen(file_name) == 0) file_name = "/index.html";
+            char *temp = output;
+            output = (char *) malloc(sizeof(char) * (strlen(output) + strlen(file_name) + 1));
+            if (output == NULL) return t_err("realloc");
+            strcpy(output, temp);
+            strcat(output, file_name);
+        }
+        opts->output = fopen(output, "w");
+        if (opts->dflag) free(output);
+        if (opts->output == NULL) return t_err("fopen");
+    }
+    return 0;
+}
+
 static int parse_args(t_opt *opts, int argc, char** argv) {
-    int opt;
-    char *output_path;
+    char opt, *output_path;
     while ((opt = getopt(argc, argv, "p:o:d:")) != -1) {
         switch (opt) {
             case 'p':
                 opts->pflag++;
-                opts->port = optarg;
-                if (parse_int(NULL, opts->port) == -1) return t_err("parse_int");
+                opts->server_port = optarg;
+                if (parse_int(NULL, opts->server_port) == -1) return t_err("parse_int");
                 break;
             case 'o':
                 opts->oflag++;
@@ -52,33 +95,23 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
         }
     }
     if (
-        optind > argc - 1 ||
-        opts->pflag > 1 ||
-        opts->oflag > 1 ||
-        opts->dflag > 1 ||
-        (opts->oflag == 1 && opts->dflag == 1)
-    ) usage();
-    char *url = argv[optind];
-    if (strncmp(url, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) return m_err("incorrect protocol");
-    opts->url_path = url + strlen(HTTP_PREFIX);
-    if (opts->oflag || opts->dflag) {
-        if (opts->dflag) {
-            char *file_name;
-            file_name = strrchr(opts->url_path, '/');
-            if (file_name == NULL) file_name = "";
-            else file_name++;
-            if (strlen(file_name) == 0) file_name = "index.html";
-            strcat(output_path, file_name);
-        }
-        opts->output = fopen(output_path, "w");
-        if (opts->output == NULL) return t_err("fopen");
+            optind > argc - 1 ||
+            opts->pflag > 1 ||
+            opts->oflag > 1 ||
+            opts->dflag > 1 ||
+            (opts->oflag == 1 && opts->dflag == 1)
+            ) usage();
+    if (parse_url_details(opts, argv) == -1) return t_err("parse_url_details");
+    if (open_output(opts, output_path) == -1) {
+        free(opts->server_host);
+        return t_err("open_output");
     }
     return 0;
 }
 
 int main(int argc, char** argv) {
     prog_name = argv[0];
-    t_opt opts = { 0, 0, 0, NULL, "80", stdout };
+    t_opt opts = { 0, 0, 0, NULL, NULL, "80", stdout };
     if (parse_args(&opts, argc, argv) < 0) {
         e_err("parse_args");
     }
@@ -86,14 +119,23 @@ int main(int argc, char** argv) {
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(opts.url_path, opts.port, &hints, &ai) != 0) e_err("getaddrinfo");
+    if (getaddrinfo(opts.server_url, opts.server_port, &hints, &ai) != 0) {
+        free(opts.server_host);
+        errno = EINVAL;
+        e_err("getaddrinfo");
+    }
     int sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
     connect(sockfd, ai->ai_addr, ai->ai_addrlen);
     FILE *sockfile = fdopen(sockfd, "r+");
-    if (sockfile == NULL) e_err("fdopen");
-    if (fprintf(sockfile, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: osue-http-client/1.0\r\nConnection: close\r\n\r\n", opts.url_path) < 0) e_err("fputs");
+    if (sockfile == NULL) {
+        free(opts.server_host);
+        e_err("fdopen");
+    }
+    if (fprintf(sockfile, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: http-client/1.0\r\nConnection: close\r\n\r\n", opts.server_host) < 0) {
+        free(opts.server_host);
+        e_err("fputs");
+    }
     fflush(sockfile);
-
     bool is_content;
     size_t len = 0, size = 0, linec = 0;
     char *line;
@@ -101,16 +143,19 @@ int main(int argc, char** argv) {
         if (
             linec++ == 0 &&
             (
-                !substr_at(line, "HTTP/1.1", 0) ||
-                !substr_at(line, "200", 9) ||
-                !substr_at(line, "OK", 13)
+                    !substr_at(line, "HTTP/1.1", 0) ||
+                    !substr_at(line, "200", 9) ||
+                    !substr_at(line, "OK", 13)
             )
-        ) e_err("incorrect protocol");
+        ) {
+            free(opts.server_host);
+            e_err("incorrect protocol");
+        }
         if (is_content) {
             fprintf(opts.output, "%s", line);
         } else if (size <= 2) is_content = true;
     }
     printf("\n");
     free(line);
-
+    free(opts.server_host);
 }
