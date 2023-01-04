@@ -13,8 +13,9 @@ typedef struct Options {
     int pflag;
     int oflag;
     int dflag;
-    char *server_url; /**< Host and filepath */
     char *server_host;
+    char *server_path;
+    char *server_args;
     char *server_port;
     FILE *output;
 } t_opt;
@@ -39,23 +40,22 @@ static void usage(void) {
 static int parse_url_details(t_opt *opts, char **argv) {
     char *url_with_protocol = argv[optind];
     if (strncmp(url_with_protocol, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) return m_err("incorrect protocol");
-    opts->server_url = url_with_protocol + strlen(HTTP_PREFIX);
-    opts->server_host = (char *) malloc(sizeof(char) * strlen(opts->server_url) + 1);
-    strcpy(opts->server_host, opts->server_url);
-    if (
-        (opts->server_host = strtok(opts->server_host, "/")) == NULL ||
-        (opts->server_host = strtok(opts->server_host, "?")) == NULL
-    ) {
-        free(opts->server_host);
-        return t_err("strtok");
+    opts->server_host = url_with_protocol + strlen(HTTP_PREFIX);
+    int len_before = strlen(opts->server_host);
+    opts->server_host = strtok(opts->server_host, "/");
+    if (len_before == strlen(opts->server_host)) {
+        opts->server_host = strtok(opts->server_host, "?");
+    } else {
+        opts->server_path = strtok(NULL, "?");
     }
+    opts->server_args = strtok(NULL, "");
     return 0;
 }
 
-static int open_output(t_opt *opts, char *output) {
+static int open_out_fp(t_opt *opts, char *output) {
     if (opts->oflag || opts->dflag) {
         if (opts->dflag) {
-            char *file_name = strrchr(opts->server_url, '/');
+            char *file_name = strrchr(opts->server_path, '/');
             if (file_name == NULL) file_name = "";
             else file_name++;
             if (strlen(file_name) == 0) file_name = "/index.html";
@@ -102,41 +102,49 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
             (opts->oflag == 1 && opts->dflag == 1)
             ) usage();
     if (parse_url_details(opts, argv) == -1) return t_err("parse_url_details");
-    if (open_output(opts, output_path) == -1) {
+    if (open_out_fp(opts, output_path) == -1) {
         free(opts->server_host);
-        return t_err("open_output");
+        return t_err("open_out_fp");
     }
     return 0;
 }
 
-int main(int argc, char** argv) {
-    prog_name = argv[0];
-    t_opt opts = { 0, 0, 0, NULL, NULL, "80", stdout };
-    if (parse_args(&opts, argc, argv) < 0) {
-        e_err("parse_args");
-    }
+static int connect_server(FILE **sockfile, t_opt *opts) {
     struct addrinfo hints, *ai;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(opts.server_url, opts.server_port, &hints, &ai) != 0) {
-        free(opts.server_host);
+    if (getaddrinfo(opts->server_host, opts->server_port, &hints, &ai) != 0) {
         errno = EINVAL;
-        e_err("getaddrinfo");
+        return t_err("getaddrinfo");
     }
     int sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
     connect(sockfd, ai->ai_addr, ai->ai_addrlen);
-    FILE *sockfile = fdopen(sockfd, "r+");
-    if (sockfile == NULL) {
-        free(opts.server_host);
-        e_err("fdopen");
+    *sockfile = fdopen(sockfd, "r+");
+    if (*sockfile == NULL) return t_err("fdopen");
+    return 0;
+}
+
+static int send_request(FILE *sockfile, t_opt *opts) {
+    char resource[(opts->server_path ? strlen(opts->server_path) : 0) + (opts->server_args ? strlen(opts->server_args) : 0) + 3];
+    strcpy(resource, "/");
+    if (opts->server_path) strcat(resource, opts->server_path);
+    if (opts->server_args) {
+        strcat(resource, "?");
+        strcat(resource, opts->server_args);
     }
-    if (fprintf(sockfile, "GET / HTTP/1.1\r\nHost: %s\r\nUser-Agent: http-client/1.0\r\nConnection: close\r\n\r\n", opts.server_host) < 0) {
-        free(opts.server_host);
-        e_err("fputs");
-    }
+    if (fprintf(
+        sockfile,
+        "GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: http-client/1.0\r\nConnection: close\r\n\r\n",
+        resource,
+        opts->server_host
+    ) < 0) return t_err("fprintf");
     fflush(sockfile);
-    bool is_content;
+    return 0;
+}
+
+static int print_response(FILE *sockfile, t_opt opts) {
+    bool is_content = false;
     size_t len = 0, size = 0, linec = 0;
     char *line;
     while ((size = getline(&line, &len, sockfile)) != -1) {
@@ -148,14 +156,31 @@ int main(int argc, char** argv) {
                     !substr_at(line, "OK", 13)
             )
         ) {
-            free(opts.server_host);
-            e_err("incorrect protocol");
+            free(line);
+            return t_err("incorrect protocol");
         }
         if (is_content) {
             fprintf(opts.output, "%s", line);
         } else if (size <= 2) is_content = true;
     }
-    printf("\n");
     free(line);
-    free(opts.server_host);
+    printf("\n");
+    return 0;
+}
+
+int main(int argc, char** argv) {
+    prog_name = argv[0];
+    t_opt opts = { 0, 0, 0, NULL, NULL, NULL, "80", stdout };
+    if (parse_args(&opts, argc, argv) < 0) e_err("parse_args");
+    FILE *sockfile = NULL;
+    if (connect_server(&sockfile, &opts) == -1) e_err("connect_server");
+    if (send_request(sockfile, &opts) == -1) {
+        fclose(sockfile);
+        e_err("send_request");
+    }
+    if (print_response(sockfile, opts) == -1) {
+        fclose(sockfile);
+        e_err("print_response");
+    }
+    fclose(sockfile);
 }
