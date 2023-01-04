@@ -191,7 +191,6 @@ static int print_response(FILE *sockfile, t_opt opts) {
         printf("Protocol error!");
         return -2;
     }
-    if (opts.output == stdout) printf("\n");
     return 0;
 }
 
