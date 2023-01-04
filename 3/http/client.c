@@ -109,6 +109,12 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
     return 0;
 }
 
+/**
+ * aia
+ * @param sockfile
+ * @param opts
+ * @return
+ */
 static int connect_server(FILE **sockfile, t_opt *opts) {
     struct addrinfo hints, *ai;
     memset(&hints, 0, sizeof(hints));
@@ -119,7 +125,11 @@ static int connect_server(FILE **sockfile, t_opt *opts) {
         return t_err("getaddrinfo");
     }
     int sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-    connect(sockfd, ai->ai_addr, ai->ai_addrlen);
+    if (connect(sockfd, ai->ai_addr, ai->ai_addrlen) == -1) {
+        freeaddrinfo(ai);
+        return t_err("connect");
+    };
+    freeaddrinfo(ai);
     *sockfile = fdopen(sockfd, "r+");
     if (*sockfile == NULL) return t_err("fdopen");
     return 0;
@@ -152,7 +162,7 @@ static int send_request(FILE *sockfile, t_opt *opts) {
 static int print_response(FILE *sockfile, t_opt opts) {
     bool is_content = false;
     size_t len = 0, linec = 0;
-    char *line;
+    char *line = NULL;
     while (getline(&line, &len, sockfile) != -1) {
         if (linec++ == 0) {
             char *protocol = strtok(line, " ");
@@ -190,15 +200,21 @@ int main(int argc, char** argv) {
     t_opt opts = { 0, 0, 0, NULL, NULL, NULL, "80", stdout };
     if (parse_args(&opts, argc, argv) < 0) e_err("parse_args");
     FILE *sockfile = NULL;
-    if (connect_server(&sockfile, &opts) == -1) e_err("connect_server");
+    if (connect_server(&sockfile, &opts) == -1) {
+        if (opts.output != stdout) fclose(opts.output);
+        e_err("connect_server");
+    }
     if (send_request(sockfile, &opts) == -1) {
         fclose(sockfile);
+        if (opts.output != stdout) fclose(opts.output);
         e_err("send_request");
     }
     int res = print_response(sockfile, opts);
     if (res < 0) {
         fclose(sockfile);
+        if (opts.output != stdout) fclose(opts.output);
         exit(abs(res));
     }
     fclose(sockfile);
+    if (opts.output != stdout) fclose(opts.output);
 }
