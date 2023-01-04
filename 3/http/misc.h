@@ -40,7 +40,7 @@ void e_err(char *fun_name);
 /**
  * @brief Parses an integer from a hexadecimal number.
  * @details Validates if the string is a positive integer.
- * @param dst Pointer to be updated with the parsed integer.
+ * @param dst Pointer to be updated with the parsed integer. If NULL, it just returns whether it's an integer.
  * @param src String to be parsed of the hexadecimal number.
  * @return 0 on success, -1 on error.
  */

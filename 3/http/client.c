@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #define HTTP_PREFIX "http://"
+#define DEFAULT_FILE "index.html"
 
 typedef struct Options {
     int pflag;
@@ -55,14 +56,17 @@ static int parse_url_details(t_opt *opts, char **argv) {
 static int open_out_fp(t_opt *opts, char *output) {
     if (opts->oflag || opts->dflag) {
         if (opts->dflag) {
-            char *file_name = strrchr(opts->server_path, '/');
-            if (file_name == NULL) file_name = "";
-            else file_name++;
-            if (strlen(file_name) == 0) file_name = "/index.html";
+            char *file_name = DEFAULT_FILE;
+            if (opts->server_path != NULL) {
+                file_name = strrchr(opts->server_path, '/');
+                if (file_name == NULL) file_name = opts->server_path;
+                else if (strlen(++file_name) == 0) file_name = DEFAULT_FILE;
+            }
             char *temp = output;
-            output = (char *) malloc(sizeof(char) * (strlen(output) + strlen(file_name) + 1));
+            output = (char *) malloc(sizeof(char) * (strlen(output) + strlen(file_name) + 2));
             if (output == NULL) return t_err("realloc");
             strcpy(output, temp);
+            strcat(output, "/");
             strcat(output, file_name);
         }
         opts->output = fopen(output, "w");
@@ -90,22 +94,18 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
                 output_path = optarg;
                 break;
             case '?':
-            default:
-                usage();
+            default: usage();
         }
     }
     if (
-            optind > argc - 1 ||
-            opts->pflag > 1 ||
-            opts->oflag > 1 ||
-            opts->dflag > 1 ||
-            (opts->oflag == 1 && opts->dflag == 1)
-            ) usage();
+        optind != argc - 1 ||
+        opts->pflag > 1 ||
+        opts->oflag > 1 ||
+        opts->dflag > 1 ||
+        (opts->oflag == 1 && opts->dflag == 1)
+    ) usage();
     if (parse_url_details(opts, argv) == -1) return t_err("parse_url_details");
-    if (open_out_fp(opts, output_path) == -1) {
-        free(opts->server_host);
-        return t_err("open_out_fp");
-    }
+    if (open_out_fp(opts, output_path) == -1) return t_err("open_out_fp");
     return 0;
 }
 
@@ -135,7 +135,7 @@ static int send_request(FILE *sockfile, t_opt *opts) {
     }
     if (fprintf(
         sockfile,
-        "GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: http-client/1.0\r\nConnection: close\r\n\r\n",
+        "GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: tuwien-osue-http/1.0\r\nConnection: close\r\n\r\n",
         resource,
         opts->server_host
     ) < 0) return t_err("fprintf");
@@ -143,28 +143,45 @@ static int send_request(FILE *sockfile, t_opt *opts) {
     return 0;
 }
 
+/**
+ *
+ * @param sockfile
+ * @param opts
+ * @return Exit status (negative)
+ */
 static int print_response(FILE *sockfile, t_opt opts) {
     bool is_content = false;
-    size_t len = 0, size = 0, linec = 0;
+    size_t len = 0, linec = 0;
     char *line;
-    while ((size = getline(&line, &len, sockfile)) != -1) {
-        if (
-            linec++ == 0 &&
-            (
-                    !substr_at(line, "HTTP/1.1", 0) ||
-                    !substr_at(line, "200", 9) ||
-                    !substr_at(line, "OK", 13)
-            )
-        ) {
-            free(line);
-            return t_err("incorrect protocol");
+    while (getline(&line, &len, sockfile) != -1) {
+        if (linec++ == 0) {
+            char *protocol = strtok(line, " ");
+            char *status = strtok(NULL, " ");
+            char *status_text = strtok(NULL, "");
+            if (
+                protocol == NULL || status == NULL || status_text == NULL ||
+                strcmp(protocol, "HTTP/1.1") != 0 ||
+                parse_int(NULL, status) == -1
+            ) {
+                free(line);
+                printf("Protocol error!\n");
+                return -2;
+            }
+            if (strcmp(status, "200") != 0) {
+                printf("Status %s: %s", status, status_text);
+                free(line);
+                return -3;
+            }
         }
-        if (is_content) {
-            fprintf(opts.output, "%s", line);
-        } else if (size <= 2) is_content = true;
+        else if (is_content) fprintf(opts.output, "%s", line);
+        else if (strlen(line) == 2) is_content = true;
     }
     free(line);
-    printf("\n");
+    if (linec == 0) {
+        printf("Protocol error!");
+        return -2;
+    }
+    if (opts.output == stdout) printf("\n");
     return 0;
 }
 
@@ -178,9 +195,10 @@ int main(int argc, char** argv) {
         fclose(sockfile);
         e_err("send_request");
     }
-    if (print_response(sockfile, opts) == -1) {
+    int res = print_response(sockfile, opts);
+    if (res < 0) {
         fclose(sockfile);
-        e_err("print_response");
+        exit(abs(res));
     }
     fclose(sockfile);
 }
