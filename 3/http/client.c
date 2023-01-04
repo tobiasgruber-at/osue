@@ -40,8 +40,19 @@ static void usage(void) {
  */
 static int parse_url_details(t_opt *opts, char **argv) {
     char *url_with_protocol = argv[optind];
-    if (strncmp(url_with_protocol, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) return m_err("incorrect protocol");
+    if (strncmp(url_with_protocol, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) {
+        errno = EINVAL;
+        return m_err("Invalid protocol");
+    }
     opts->server_host = url_with_protocol + strlen(HTTP_PREFIX);
+    if (
+        strlen(opts->server_host) == 0 ||
+        substr_at(opts->server_host, "/", 0) ||
+        substr_at(opts->server_host, "?", 0)
+    ) {
+        errno = EINVAL;
+        return m_err("Invalid hostname");
+    }
     int len_before = strlen(opts->server_host);
     opts->server_host = strtok(opts->server_host, "/");
     if (len_before == strlen(opts->server_host)) {
@@ -83,7 +94,12 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
             case 'p':
                 opts->pflag++;
                 opts->server_port = optarg;
-                if (parse_int(NULL, opts->server_port) == -1) return t_err("parse_int");
+                int port;
+                if (parse_int(&port, opts->server_port) == -1) return t_err("parse_int");
+                if (port > 65535) {
+                    errno = EINVAL;
+                    return m_err("Port too high");
+                }
                 break;
             case 'o':
                 opts->oflag++;
@@ -178,13 +194,13 @@ static int print_response(FILE *sockfile, t_opt opts) {
                 return -2;
             }
             if (strcmp(status, "200") != 0) {
-                printf("Status %s: %s", status, status_text);
+                printf("%s %s", status, status_text);
                 free(line);
                 return -3;
             }
         }
         else if (is_content) fprintf(opts.output, "%s", line);
-        else if (strlen(line) == 2) is_content = true;
+        else if (strcmp(line, "\n") == 0 || strcmp(line, "\r\n") == 0) is_content = true;
     }
     free(line);
     if (linec == 0) {
