@@ -9,6 +9,7 @@
 
 #define HTTP_PREFIX "http://"
 #define DEFAULT_FILE "index.html"
+#define BUF_SIZE 1024
 
 typedef struct Options {
     int pflag;
@@ -57,10 +58,18 @@ static int parse_url_details(t_opt *opts, char **argv) {
     opts->server_host = strtok(opts->server_host, "/");
     if (len_before == strlen(opts->server_host)) {
         opts->server_host = strtok(opts->server_host, "?");
+        opts->server_args = strtok(NULL, "");
     } else {
-        opts->server_path = strtok(NULL, "?");
+        char *temp = strtok(NULL, "");
+        if (temp != NULL) {
+            if (strncmp(temp, "?", 1) == 0) {
+                opts->server_args = strtok(temp, "?");
+            } else {
+                opts->server_path = strtok(temp, "?");
+                opts->server_args = strtok(NULL, "");
+            }
+        }
     }
-    opts->server_args = strtok(NULL, "");
     return 0;
 }
 
@@ -170,7 +179,7 @@ static int send_request(FILE *sockfile, t_opt *opts) {
 }
 
 /**
- *
+ * Header info parsed with getline. Body information parsed with fread to parse any data (incl. binary).
  * @param sockfile
  * @param opts
  * @return Exit status (negative)
@@ -190,22 +199,30 @@ static int print_response(FILE *sockfile, t_opt opts) {
                 parse_int(NULL, status) == -1
             ) {
                 free(line);
-                printf("Protocol error!\n");
+                fprintf(stderr, "Protocol error!\n");
                 return -2;
             }
             if (strcmp(status, "200") != 0) {
-                printf("%s %s", status, status_text);
+                fprintf(stderr, "%s %s", status, status_text);
                 free(line);
                 return -3;
             }
+        } else if (strcmp(line, "\r\n") == 0) {
+            is_content = true;
+            break;
         }
-        else if (is_content) fprintf(opts.output, "%s", line);
-        else if (strcmp(line, "\n") == 0 || strcmp(line, "\r\n") == 0) is_content = true;
     }
     free(line);
     if (linec == 0) {
-        printf("Protocol error!");
+        fprintf(stderr, "Protocol error!");
         return -2;
+    }
+    if (is_content) {
+        char buf[BUF_SIZE];
+        while (!feof(sockfile)) {
+            size_t read = fread(buf, sizeof(uint8_t), BUF_SIZE, sockfile);
+            fwrite(buf, sizeof(uint8_t), read, opts.output);
+        }
     }
     return 0;
 }
