@@ -1,3 +1,14 @@
+/**
+ * Client module.
+ * @brief Main entry point for the http client.
+ * @details Implements a client for the HTTP protocol (version 1.1) for sending a GET request.<br>
+ * Establishes a TCP / IP socket connection to a server to requests a resource.<br>
+ * Output is written to a specified file or stdout.
+ * @file client.c
+ * @author Tobias Gruber, 11912367
+ * @date 25.12.2022
+ **/
+
 #include "misc.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,25 +18,28 @@
 #include <netdb.h>
 #include <errno.h>
 
-#define HTTP_PREFIX "http://"
-#define DEFAULT_FILE "index.html"
-#define BUF_SIZE 1024
+#define HTTP_PREFIX "http://" /**< Http protocol prefix for urls. */
+#define DEFAULT_FILE "index.html" /**< Default file for http requests. */
+#define BUF_SIZE 1024 /**< Size of buffers for socket streams. */
 
+/**
+ * @brief Program options.
+ * @details The program configurations that are specified by the arguments.
+ */
 typedef struct Options {
-    int pflag;
-    int oflag;
-    int dflag;
-    char *server_host;
-    char *server_path;
-    char *server_args;
-    char *server_port;
-    FILE *output;
+    int pflag; /**< Count of passed -p flags (from the arguments). */
+    int oflag; /**< Count of passed -o flags (from the arguments). */
+    int dflag; /**< Count of passed -d flags (from the arguments). */
+    char *server_host; /**< Host name of the server. */
+    char *server_path; /**< Path to resource on the server. */
+    char *server_args; /**< Request arguments passed to the server. */
+    char *server_port; /**< Port name of the server. */
+    FILE *output; /**< File pointer for the output. */
 } t_opt;
 
 /**
  * @brief Prints the usage of the program to stderr and exists with an error.
  * @details Exits the program with EXIT_FAILURE.<br>
- * Error handling of fprintf is not covered as the program has to exit anyway.<br>
  * Used global variables: prog_name
  */
 static void usage(void) {
@@ -34,13 +48,13 @@ static void usage(void) {
 }
 
 /**
- * Mallocs space for server_host
- * @param opts
- * @param argv
- * @return
+ * @brief Parses details from an url.
+ * @details Validates and parses important components of an url, such as protocol, host, resource path and arguments.
+ * @param opts Program options.
+ * @param url_with_protocol Url including the protocol prefix.
+ * @return 0 on success or if valid, -1 on error or if invalid.
  */
-static int parse_url_details(t_opt *opts, char **argv) {
-    char *url_with_protocol = argv[optind];
+static int parse_url_details(t_opt *opts, char *url_with_protocol) {
     if (strncmp(url_with_protocol, HTTP_PREFIX, strlen(HTTP_PREFIX)) != 0) {
         errno = EINVAL;
         return m_err("Invalid protocol");
@@ -48,8 +62,8 @@ static int parse_url_details(t_opt *opts, char **argv) {
     opts->server_host = url_with_protocol + strlen(HTTP_PREFIX);
     if (
         strlen(opts->server_host) == 0 ||
-        substr_at(opts->server_host, "/", 0) ||
-        substr_at(opts->server_host, "?", 0)
+        strncmp(opts->server_host, "/", 1) == 0 ||
+        strncmp(opts->server_host, "?", 1) == 0
     ) {
         errno = EINVAL;
         return m_err("Invalid hostname");
@@ -73,6 +87,17 @@ static int parse_url_details(t_opt *opts, char **argv) {
     return 0;
 }
 
+/**
+ * @brief Opens an output stream based on passed arguments.
+ * @details If specified in program options, that the output should be printed to either a directory or a file,
+ * a corresponding output stream is opened.<br>
+ * If the output should be printed to a directory, the file depends on the resource that is requested (falls back to
+ * index.html).<br>
+ * Opens the output file that must be closed later.
+ * @param opts Program options.
+ * @param output Path to output file.
+ * @return 0 on success, -1 on error.
+ */
 static int open_out_fp(t_opt *opts, char *output) {
     if (opts->oflag || opts->dflag) {
         if (opts->dflag) {
@@ -96,6 +121,17 @@ static int open_out_fp(t_opt *opts, char *output) {
     return 0;
 }
 
+/**
+ * @brief Parses the program arguments.
+ * @details Reads and validates program options and arguments.<br>
+ * Parses informations of the passed url and opens an output stream if necessary.<br>
+ * Might exit the program with EXIT_FAILURE if arguments invalid.<br>
+ * Opens the output file that must be closed later.
+ * @param opts Pointer to program options.
+ * @param argc Argument counter.
+ * @param argv Argument vector.
+ * @return 0 on success, -1 on error.
+ * */
 static int parse_args(t_opt *opts, int argc, char** argv) {
     char opt, *output_path;
     while ((opt = getopt(argc, argv, "p:o:d:")) != -1) {
@@ -129,16 +165,18 @@ static int parse_args(t_opt *opts, int argc, char** argv) {
         opts->dflag > 1 ||
         (opts->oflag == 1 && opts->dflag == 1)
     ) usage();
-    if (parse_url_details(opts, argv) == -1) return t_err("parse_url_details");
+    if (parse_url_details(opts, argv[optind]) == -1) return t_err("parse_url_details");
     if (open_out_fp(opts, output_path) == -1) return t_err("open_out_fp");
     return 0;
 }
 
 /**
- * aia
- * @param sockfile
- * @param opts
- * @return
+ * @brief Connects the client with the http server.
+ * @details Requests ip addresses of the server and connects via sockets.<br>
+ * Opens the socket file sockfile, must be closed later.
+ * @param sockfile Pointer that should be updated with the socket file.
+ * @param opts Program options.
+ * @return 0 on success, -1 on error.
  */
 static int connect_server(FILE **sockfile, t_opt *opts) {
     struct addrinfo hints, *ai;
@@ -160,6 +198,14 @@ static int connect_server(FILE **sockfile, t_opt *opts) {
     return 0;
 }
 
+/**
+ * @brief Sends an http request.
+ * @details Sends a GET request to the server. Details are specified in the program options.<br>
+ * Socket stream gets flushed after request is sent.
+ * @param sockfile Pointer of the socket file.
+ * @param opts Program options.
+ * @return 0 on success, -1 on error.
+ */
 static int send_request(FILE *sockfile, t_opt *opts) {
     char resource[(opts->server_path ? strlen(opts->server_path) : 0) + (opts->server_args ? strlen(opts->server_args) : 0) + 3];
     strcpy(resource, "/");
@@ -179,10 +225,13 @@ static int send_request(FILE *sockfile, t_opt *opts) {
 }
 
 /**
- * Header info parsed with getline. Body information parsed with fread to parse any data (incl. binary).
- * @param sockfile
- * @param opts
- * @return Exit status (negative)
+ * @brief Validates and prints the response of the http request.
+ * @details Validates if the response's protocol, status and if it is well-formed.<br>
+ * If there is a response body, it is printed to the output stream.<br>
+ * Header infos are parsed by getline() and the body is parsed by fread() to process any data (incl. binary).
+ * @param sockfile Pointer of the socket file.
+ * @param opts Program options.
+ * @return 0 on success and a negative exit status on failure.
  */
 static int print_response(FILE *sockfile, t_opt opts) {
     bool is_content = false;
@@ -198,8 +247,8 @@ static int print_response(FILE *sockfile, t_opt opts) {
                 strcmp(protocol, "HTTP/1.1") != 0 ||
                 parse_int(NULL, status) == -1
             ) {
-                free(line);
                 fprintf(stderr, "Protocol error!\n");
+                free(line);
                 return -2;
             }
             if (strcmp(status, "200") != 0) {
@@ -220,13 +269,24 @@ static int print_response(FILE *sockfile, t_opt opts) {
     if (is_content) {
         char buf[BUF_SIZE];
         while (!feof(sockfile)) {
-            size_t read = fread(buf, sizeof(uint8_t), BUF_SIZE, sockfile);
-            fwrite(buf, sizeof(uint8_t), read, opts.output);
+            size_t n = fread(buf, 1, BUF_SIZE, sockfile);
+            fwrite(buf, 1, n, opts.output);
         }
     }
     return 0;
 }
 
+/**
+ * @brief Requests a resource from a given server.
+ * @details Based on the passed arguments it: Connects to a server, requests a resource and prints it to a output
+ * stream.<br>
+ * The connection is established using sockets and the http protocol is being adhered to.<br>
+ * Might exit with status code 1, 2 or 3 if errors occur.<br>
+ * Global variables: prog_name
+ * @param argc Argument counter.
+ * @param argv Argument vector.
+ * @return EXIT_SUCCESS on successful termination.
+ */
 int main(int argc, char** argv) {
     prog_name = argv[0];
     t_opt opts = { 0, 0, 0, NULL, NULL, NULL, "80", stdout };
@@ -249,4 +309,5 @@ int main(int argc, char** argv) {
     }
     fclose(sockfile);
     if (opts.output != stdout) fclose(opts.output);
+    return EXIT_SUCCESS;
 }

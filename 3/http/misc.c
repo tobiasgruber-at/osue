@@ -3,7 +3,7 @@
  * @brief Implementation of the miscellaneous module definitions.
  * @file misc.c
  * @author Tobias Gruber, 11912367
- * @date 19.11.2022
+ * @date 03.01.2023
  **/
 
 #include "misc.h"
@@ -45,17 +45,4 @@ int parse_int(int *dst, char *src) {
     }
     if (dst != NULL) *dst = (int) num;
     return 0;
-}
-
-int parse_c_int(int *dst, char src) {
-    char src_str[2] = {0};
-    src_str[0] = src;
-    if (parse_int(dst, src_str) < 0) return t_err("parse_int");
-    return 0;
-}
-
-bool substr_at(char *haystack, char *needle, int idx) {
-    char *pos = strstr(haystack, needle);
-    if (pos != NULL && pos - haystack == idx) return true;
-    return false;
 }

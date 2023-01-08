@@ -1,5 +1,5 @@
 # author: Tobias Gruber, 11912367
-# program: client, server
+# program: client
 
 CC = gcc # c compiler
 DEFS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_POSIX_C_SOURCE=200809L # definitions
